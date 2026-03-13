@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rigel Admin</title>
+  <style>
+    :root {
+      --paper: #f5f0e7;
+      --panel: rgba(255,255,255,.84);
+      --ink: #172126;
+      --muted: #5c676c;
+      --line: rgba(23,33,38,.14);
+      --accent: #b44a2b;
+      --accent-soft: #f3d4c7;
+      --ok: #2f6b4f;
+      --ok-soft: #d9ecdf;
+      --warn: #8d4f23;
+      --warn-soft: #f6dfcb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180,74,43,.14), transparent 32%),
+        linear-gradient(180deg, #f7f3ec 0%, var(--paper) 100%);
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 40px 20px 64px; }
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(23,33,38,.08);
+      backdrop-filter: blur(10px);
+    }
+    .hero { padding: 28px; margin-bottom: 22px; }
+    h1 { margin: 0 0 10px; font-size: 42px; }
+    h2 { margin: 0 0 12px; font-size: 22px; }
+    p { margin: 0; color: var(--muted); line-height: 1.6; }
+    nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    nav a {
+      text-decoration: none;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #fff;
+    }
+    nav a.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .panel { padding: 24px; }
+    .stack { display: grid; gap: 18px; }
+    .toolbar, .action-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar input,
+    .toolbar select,
+    .action-grid input,
+    .action-grid select {
+      min-width: 160px;
+      flex: 1 1 180px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    .toolbar label,
+    .action-grid label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .primary { background: var(--ink); color: #fff; }
+    .accent { background: var(--accent); color: #fff; }
+    .ghost {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .small {
+      padding: 8px 12px;
+      font-size: 13px;
+      border-radius: 10px;
+    }
+    .meta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 13px;
+    }
+    .notice {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.66);
+      color: var(--ink);
+    }
+    .notice.ok {
+      background: var(--ok-soft);
+      color: var(--ok);
+      border-color: rgba(47,107,79,.18);
+    }
+    .notice.warn {
+      background: var(--warn-soft);
+      color: var(--warn);
+      border-color: rgba(141,79,35,.18);
+    }
+    .hidden { display: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #fff;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .mono { font-family: "SFMono-Regular", Menlo, monospace; font-size: 12px; }
+    .empty {
+      padding: 20px;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      color: var(--muted);
+      background: rgba(255,255,255,.6);
+    }
+    @media (max-width: 760px) {
+      h1 { font-size: 32px; }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr {
+        border-bottom: 1px solid var(--line);
+        padding: 8px 0;
+      }
+      td {
+        border: 0;
+        padding: 6px 0;
+      }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1 id="title">Rigel Admin</h1>
+      <p id="subtitle">后台视图直接聚合现有服务接口，不新增数据库耦合。</p>
+      <nav>
+        <a href="/admin/products" data-tab="products">商品管理</a>
+        <a href="/admin/parts" data-tab="parts">配件管理</a>
+        <a href="/admin/jobs" data-tab="jobs">任务状态</a>
+        <a href="/">返回前台</a>
+      </nav>
+    </section>
+
+    <section class="panel stack">
+      <div class="toolbar">
+        <input id="keyword" type="search" placeholder="输入关键词，例如 4060 / ryzen">
+        <label id="real-only-wrap" class="hidden"><input id="real-only" type="checkbox" checked>仅真实数据</label>
+        <label id="self-operated-wrap" class="hidden"><input id="self-operated-only" type="checkbox" checked>仅自营</label>
+        <button id="reload" class="primary" type="button">刷新数据</button>
+      </div>
+
+      <div id="collect-panel" class="stack hidden">
+        <div>
+          <h2>手动触发采集</h2>
+          <p>通过 console 调用 jd-collector 的采集接口，生成新任务并立即入库。</p>
+        </div>
+        <div class="action-grid">
+          <input id="collect-keyword" type="search" placeholder="采集关键词，例如 RTX 4060">
+          <select id="collect-category">
+            <option value="GPU">GPU</option>
+            <option value="CPU">CPU</option>
+            <option value="MB">MB</option>
+            <option value="RAM">RAM</option>
+            <option value="SSD">SSD</option>
+            <option value="PSU">PSU</option>
+            <option value="CASE">CASE</option>
+            <option value="COOLER">COOLER</option>
+          </select>
+          <select id="collect-limit">
+            <option value="3">3 条</option>
+            <option value="5" selected>5 条</option>
+            <option value="10">10 条</option>
+          </select>
+          <label><input id="collect-persist" type="checkbox" checked>入库保存</label>
+          <button id="collect-submit" class="accent" type="button">立即采集</button>
+          <button id="collect-preset-submit" class="ghost" type="button">采集基础品类</button>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span class="badge" id="source-label">Source</span>
+        <span class="badge" id="count-label">0 items</span>
+      </div>
+
+      <div id="status" class="notice hidden"></div>
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <script>
+    const pageConfig = {
+      products: {
+        title: "商品管理",
+        subtitle: "读取 rigel-jd-collector 的商品列表接口，便于快速确认采集落库结果。",
+        source: "rigel-jd-collector /api/v1/products",
+        endpoint: "/api/admin/products",
+        queryKey: "keyword",
+        supportsCollect: true,
+        columns: [
+          ["标题", item => item.title || "-"],
+          ["价格", item => `${item.price || 0} ${item.currency || "CNY"}`],
+          ["店铺", item => item.shop_name || "-"],
+          ["状态", item => item.availability || "-"],
+          ["外部ID", item => `<span class="mono">${item.external_id || "-"}</span>`]
+        ]
+      },
+      parts: {
+        title: "配件管理",
+        subtitle: "读取 rigel-build-engine 的标准配件查询接口，确认规范化结果可被检索。",
+        source: "rigel-build-engine /api/v1/parts/search",
+        endpoint: "/api/admin/parts",
+        queryKey: "keyword",
+        supportsCollect: false,
+        columns: [
+          ["展示名", item => item.display_name || "-"],
+          ["类别", item => item.category || "-"],
+          ["品牌", item => item.brand || "-"],
+          ["型号", item => item.model || "-"],
+          ["ID", item => `<span class="mono">${item.id || "-"}</span>`]
+        ]
+      },
+      jobs: {
+        title: "任务状态",
+        subtitle: "读取 rigel-jd-collector 的最近任务接口，便于查看采集执行结果和重试任务。",
+        source: "rigel-jd-collector /api/v1/jobs",
+        endpoint: "/api/admin/jobs",
+        queryKey: "",
+        supportsCollect: false,
+        columns: [
+          ["任务ID", item => `<span class="mono">${item.id || "-"}</span>`],
+          ["类型", item => item.job_type || "-"],
+          ["状态", item => item.status || "-"],
+          ["平台", item => item.source_platform || "-"],
+          ["更新时间", item => item.updated_at || "-"],
+          ["操作", item => `<button class="ghost small retry-button" data-job-id="${item.id || ""}">重试</button>`]
+        ]
+      }
+    };
+
+    const currentTab = (() => {
+      if (location.pathname.includes("/admin/parts")) return "parts";
+      if (location.pathname.includes("/admin/jobs")) return "jobs";
+      return "products";
+    })();
+
+    const config = pageConfig[currentTab];
+    const titleEl = document.getElementById("title");
+    const subtitleEl = document.getElementById("subtitle");
+    const sourceLabelEl = document.getElementById("source-label");
+    const countLabelEl = document.getElementById("count-label");
+    const contentEl = document.getElementById("content");
+    const statusEl = document.getElementById("status");
+    const keywordEl = document.getElementById("keyword");
+    const reloadEl = document.getElementById("reload");
+    const collectPanelEl = document.getElementById("collect-panel");
+    const realOnlyWrapEl = document.getElementById("real-only-wrap");
+    const selfOperatedWrapEl = document.getElementById("self-operated-wrap");
+    const realOnlyEl = document.getElementById("real-only");
+    const selfOperatedOnlyEl = document.getElementById("self-operated-only");
+    const collectKeywordEl = document.getElementById("collect-keyword");
+    const collectCategoryEl = document.getElementById("collect-category");
+    const collectLimitEl = document.getElementById("collect-limit");
+    const collectPersistEl = document.getElementById("collect-persist");
+    const collectSubmitEl = document.getElementById("collect-submit");
+    const collectPresetSubmitEl = document.getElementById("collect-preset-submit");
+
+    titleEl.textContent = config.title;
+    subtitleEl.textContent = config.subtitle;
+    sourceLabelEl.textContent = config.source;
+    document.querySelectorAll("nav a[data-tab]").forEach(link => {
+      if (link.dataset.tab === currentTab) link.classList.add("active");
+    });
+    if (!config.queryKey) {
+      keywordEl.classList.add("hidden");
+    }
+    if (currentTab === "products") {
+      realOnlyWrapEl.classList.remove("hidden");
+      selfOperatedWrapEl.classList.remove("hidden");
+    }
+    if (config.supportsCollect) {
+      collectPanelEl.classList.remove("hidden");
+    }
+
+    function showStatus(message, type = "ok") {
+      statusEl.textContent = message;
+      statusEl.className = `notice ${type}`;
+      statusEl.classList.remove("hidden");
+    }
+
+    function hideStatus() {
+      statusEl.className = "notice hidden";
+      statusEl.textContent = "";
+    }
+
+    async function loadData() {
+      const params = new URLSearchParams();
+      params.set("limit", "20");
+      if (config.queryKey && keywordEl.value.trim()) {
+        params.set(config.queryKey, keywordEl.value.trim());
+      }
+      if (currentTab === "products") {
+        if (realOnlyEl.checked) params.set("real_only", "true");
+        if (selfOperatedOnlyEl.checked) params.set("self_operated_only", "true");
+      }
+
+      contentEl.innerHTML = '<div class="empty">正在加载...</div>';
+      try {
+        const res = await fetch(`${config.endpoint}?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`request failed with status ${res.status}`);
+        }
+        const data = await res.json();
+        const items = data.items || [];
+        countLabelEl.textContent = `${items.length} items`;
+        if (!items.length) {
+          contentEl.innerHTML = '<div class="empty">当前没有可展示的数据。</div>';
+          return;
+        }
+
+        const head = config.columns.map(([label]) => `<th>${label}</th>`).join("");
+        const body = items.map(item => {
+          const cells = config.columns.map(([label, render]) => (
+            `<td data-label="${label}">${render(item)}</td>`
+          )).join("");
+          return `<tr>${cells}</tr>`;
+        }).join("");
+        contentEl.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+
+        if (currentTab === "jobs") {
+          contentEl.querySelectorAll(".retry-button").forEach(button => {
+            button.addEventListener("click", async () => {
+              const jobID = button.dataset.jobId;
+              if (!jobID) return;
+              button.disabled = true;
+              try {
+                const res = await fetch(`/api/admin/jobs/${jobID}/retry`, { method: "POST" });
+                if (!res.ok) {
+                  throw new Error(`request failed with status ${res.status}`);
+                }
+                const data = await res.json();
+                showStatus(`已重试任务 ${jobID}，新任务 ${data.job_id || "-"}`, "ok");
+                await loadData();
+              } catch (error) {
+                showStatus(`重试失败: ${error.message}`, "warn");
+              } finally {
+                button.disabled = false;
+              }
+            });
+          });
+        }
+      } catch (error) {
+        contentEl.innerHTML = `<div class="empty">加载失败: ${error.message}</div>`;
+      }
+    }
+
+    reloadEl.addEventListener("click", loadData);
+    keywordEl.addEventListener("keydown", event => {
+      if (event.key === "Enter") loadData();
+    });
+    realOnlyEl?.addEventListener("change", loadData);
+    selfOperatedOnlyEl?.addEventListener("change", loadData);
+
+    if (config.supportsCollect) {
+      collectSubmitEl.addEventListener("click", async () => {
+        const keyword = collectKeywordEl.value.trim();
+        if (!keyword) {
+          showStatus("采集关键词不能为空。", "warn");
+          return;
+        }
+
+        collectSubmitEl.disabled = true;
+        hideStatus();
+        try {
+          const res = await fetch("/api/admin/collect/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              keyword,
+              category: collectCategoryEl.value,
+              limit: Number(collectLimitEl.value),
+              persist: collectPersistEl.checked
+            })
+          });
+          if (!res.ok) {
+            throw new Error(`request failed with status ${res.status}`);
+          }
+          const data = await res.json();
+          showStatus(`采集成功，任务 ${data.job_id || "-"}，入库 ${data.persisted_count || 0} 条。`, "ok");
+          keywordEl.value = keyword;
+          await loadData();
+        } catch (error) {
+          showStatus(`采集失败: ${error.message}`, "warn");
+        } finally {
+          collectSubmitEl.disabled = false;
+        }
+      });
+
+      collectPresetSubmitEl.addEventListener("click", async () => {
+        collectPresetSubmitEl.disabled = true;
+        hideStatus();
+        try {
+          const res = await fetch("/api/admin/collect/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ preset: "mvp_base" })
+          });
+          if (!res.ok) {
+            throw new Error(`request failed with status ${res.status}`);
+          }
+          const data = await res.json();
+          const failed = Number(data.failed_jobs || 0);
+          const aborted = Number(data.aborted_jobs || 0);
+          const tone = failed > 0 || aborted > 0 ? "warn" : "ok";
+          showStatus(`基础品类采集完成，执行 ${data.total_jobs || 0} 个，跳过 ${data.skipped_jobs || 0} 个，中止 ${aborted} 个，成功 ${data.successful_jobs || 0} 个，失败 ${failed} 个，累计入库 ${data.total_persisted || 0} 条。`, tone);
+          await loadData();
+        } catch (error) {
+          showStatus(`批量采集失败: ${error.message}`, "warn");
+        } finally {
+          collectPresetSubmitEl.disabled = false;
+        }
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

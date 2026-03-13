@@ -1,0 +1,46 @@
+# rigel-console
+
+Console application gateway, minimal frontend, and orchestration layer.
+
+## Language
+
+Go
+
+## Current Stage
+
+Phase 6 minimum viable implementation.
+
+## Implemented
+
+- aggregates build-engine and ai-advisor over HTTP
+- exposes `POST /build/generate`, `GET /build/{id}`, and `GET /parts/search`
+- serves an embedded frontend page for build generation
+- serves admin pages backed by collector/build-engine APIs for products, parts, and jobs
+- supports triggering JD collection and retrying collector jobs from the admin surface
+- supports triggering the `mvp_base` batch collection preset from the admin surface
+- surfaces batch collection skip/abort counts so admin users can see when JD risk control cut a run short
+- returns a slim user-facing build payload centered on selected models, price, warnings, alternatives, and AI advice
+
+## Routes
+
+- `GET /healthz`
+- `POST /build/generate`
+- `GET /build/{id}`
+- `GET /parts/search?keyword=ryzen&limit=10`
+- `POST /api/admin/collect/search`
+- `POST /api/admin/collect/batch`
+- `GET /api/admin/products?keyword=4060&limit=10`
+- `GET /api/admin/parts?keyword=ryzen&limit=10`
+- `GET /api/admin/jobs?limit=10`
+- `POST /api/admin/jobs/{id}/retry`
+- `GET /`
+- `GET /admin/products`
+- `GET /admin/parts`
+- `GET /admin/jobs`
+
+## Notes
+
+- Console does not implement compatibility logic.
+- Console relies on `rigel-build-engine`, `rigel-ai-advisor`, and `rigel-jd-collector` being reachable over HTTP.
+- Admin pages are intentionally lightweight and proxy existing service APIs instead of reading databases directly.
+- Admin product management is now expected to default to real JD data and can narrow further to JD self-operated products.
