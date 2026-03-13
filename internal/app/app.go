@@ -30,6 +30,9 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/admin/collect/search", a.handleAdminCollectSearch)
 	mux.HandleFunc("/api/admin/collect/batch", a.handleAdminCollectBatch)
 	mux.HandleFunc("/api/admin/catalog/prices", a.handleAdminCatalogPrices)
+	mux.HandleFunc("/api/admin/goofish/state-files", a.handleAdminGoofishStateFiles)
+	mux.HandleFunc("/api/admin/goofish/state/validate", a.handleAdminGoofishValidate)
+	mux.HandleFunc("/api/admin/goofish/state/default", a.handleAdminGoofishPromoteDefault)
 	mux.HandleFunc("/api/admin/products", a.handleAdminProducts)
 	mux.HandleFunc("/api/admin/parts", a.handleAdminParts)
 	mux.HandleFunc("/api/admin/jobs", a.handleAdminJobs)
@@ -200,6 +203,57 @@ func (a *App) handleAdminCatalogPrices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *App) handleAdminGoofishStateFiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	items, err := a.console.ListGoofishStateFiles(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"count": len(items), "items": items})
+}
+
+func (a *App) handleAdminGoofishValidate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req model.GoofishValidateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	response, err := a.console.ValidateGoofishState(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *App) handleAdminGoofishPromoteDefault(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req struct {
+		FileName string `json:"file_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	response, err := a.console.PromoteGoofishStateFile(r.Context(), req.FileName)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"item": response})
 }
 
 func (a *App) handleAdminJobs(w http.ResponseWriter, r *http.Request) {

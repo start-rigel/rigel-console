@@ -27,14 +27,21 @@ type JDCollectorClient interface {
 	RetryJob(ctx context.Context, jobID string) (model.AdminCollectResponse, error)
 }
 
-type Service struct {
-	buildClient BuildEngineClient
-	aiClient    AIAdvisorClient
-	jdClient    JDCollectorClient
+type GoofishCollectorClient interface {
+	ListStateFiles(ctx context.Context) ([]model.GoofishStateFile, error)
+	PromoteStateFile(ctx context.Context, fileName string) (model.GoofishStateFile, error)
+	ValidateState(ctx context.Context, req model.GoofishValidateRequest) (model.GoofishValidateResponse, error)
 }
 
-func New(buildClient BuildEngineClient, aiClient AIAdvisorClient, jdClient JDCollectorClient) *Service {
-	return &Service{buildClient: buildClient, aiClient: aiClient, jdClient: jdClient}
+type Service struct {
+	buildClient   BuildEngineClient
+	aiClient      AIAdvisorClient
+	jdClient      JDCollectorClient
+	goofishClient GoofishCollectorClient
+}
+
+func New(buildClient BuildEngineClient, aiClient AIAdvisorClient, jdClient JDCollectorClient, goofishClient GoofishCollectorClient) *Service {
+	return &Service{buildClient: buildClient, aiClient: aiClient, jdClient: jdClient, goofishClient: goofishClient}
 }
 
 func (s *Service) GenerateBuild(ctx context.Context, req model.GenerateBuildRequest) (model.BuildResponse, error) {
@@ -88,6 +95,18 @@ func (s *Service) GetAdminPriceCatalog(ctx context.Context, req model.GenerateBu
 
 func (s *Service) ListAdminJobs(ctx context.Context, limit int) ([]model.AdminJob, error) {
 	return s.jdClient.ListJobs(ctx, limit)
+}
+
+func (s *Service) ListGoofishStateFiles(ctx context.Context) ([]model.GoofishStateFile, error) {
+	return s.goofishClient.ListStateFiles(ctx)
+}
+
+func (s *Service) PromoteGoofishStateFile(ctx context.Context, fileName string) (model.GoofishStateFile, error) {
+	return s.goofishClient.PromoteStateFile(ctx, fileName)
+}
+
+func (s *Service) ValidateGoofishState(ctx context.Context, req model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
+	return s.goofishClient.ValidateState(ctx, req)
 }
 
 func (s *Service) StartAdminCollection(ctx context.Context, req model.AdminCollectRequest) (model.AdminCollectResponse, error) {

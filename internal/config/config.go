@@ -17,6 +17,7 @@ type Config struct {
 	BuildEngineBaseURL string
 	AIAdvisorBaseURL   string
 	JDCollectorBaseURL string
+	GoofishBaseURL     string
 	ReadTimeout        time.Duration
 	WriteTimeout       time.Duration
 	IdleTimeout        time.Duration
@@ -47,6 +48,7 @@ func Load() (Config, error) {
 		BuildEngineBaseURL: stringFromEnv("RIGEL_BUILD_ENGINE_BASE_URL", "http://rigel-build-engine:18082"),
 		AIAdvisorBaseURL:   stringFromEnv("RIGEL_AI_ADVISOR_BASE_URL", "http://rigel-ai-advisor:18083"),
 		JDCollectorBaseURL: stringFromEnv("RIGEL_JD_COLLECTOR_BASE_URL", "http://rigel-jd-collector:18081"),
+		GoofishBaseURL:     stringFromEnv("RIGEL_GOOFISH_COLLECTOR_BASE_URL", "http://rigel-goofish-collector:18085"),
 		ReadTimeout:        readTimeout,
 		WriteTimeout:       writeTimeout,
 		IdleTimeout:        idleTimeout,

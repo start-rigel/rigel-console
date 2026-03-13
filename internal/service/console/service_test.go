@@ -12,6 +12,7 @@ type buildClientStub struct{}
 type aiClientStub struct{}
 
 type jdClientStub struct{}
+type goofishClientStub struct{}
 
 func (buildClientStub) GenerateBuild(context.Context, model.GenerateBuildRequest) (model.BuildEngineResponse, error) {
 	return sampleBuild(), nil
@@ -65,9 +66,18 @@ func (jdClientStub) TriggerBatchCollection(context.Context, model.AdminCollectBa
 func (jdClientStub) RetryJob(context.Context, string) (model.AdminCollectResponse, error) {
 	return model.AdminCollectResponse{JobID: "job-3", RetriedFromJobID: "job-1", Persisted: true, PersistedCount: 2}, nil
 }
+func (goofishClientStub) ListStateFiles(context.Context) ([]model.GoofishStateFile, error) {
+	return []model.GoofishStateFile{{Name: "goofish_state.json", Path: "/tmp/goofish_state.json", IsRoot: true}}, nil
+}
+func (goofishClientStub) PromoteStateFile(context.Context, string) (model.GoofishStateFile, error) {
+	return model.GoofishStateFile{Name: "goofish_state.json", Path: "/tmp/goofish_state.json", IsRoot: true}, nil
+}
+func (goofishClientStub) ValidateState(context.Context, model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
+	return model.GoofishValidateResponse{Valid: true, StateFile: "goofish_state.json", Keyword: "电脑 内存", SampleCount: 1}, nil
+}
 
 func TestGenerateBuild(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GenerateBuild(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "new_only"})
 	if err != nil {
 		t.Fatalf("GenerateBuild() error = %v", err)
@@ -81,7 +91,7 @@ func TestGenerateBuild(t *testing.T) {
 }
 
 func TestGenerateCatalogRecommendation(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() error = %v", err)
@@ -95,7 +105,7 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 }
 
 func TestGetAdminPriceCatalog(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GetAdminPriceCatalog(context.Background(), model.GenerateBuildRequest{UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("GetAdminPriceCatalog() error = %v", err)
@@ -106,7 +116,7 @@ func TestGetAdminPriceCatalog(t *testing.T) {
 }
 
 func TestListAdminData(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
 
 	products, err := service.ListAdminProducts(context.Background(), model.AdminProductFilter{Keyword: "4060", Limit: 10, RealOnly: true, SelfOperatedOnly: true})
 	if err != nil {
@@ -126,7 +136,7 @@ func TestListAdminData(t *testing.T) {
 }
 
 func TestAdminActions(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
 
 	collectResponse, err := service.StartAdminCollection(context.Background(), model.AdminCollectRequest{
 		Keyword:  "RTX 4060",
@@ -155,6 +165,24 @@ func TestAdminActions(t *testing.T) {
 	}
 	if batchResponse.TotalJobs != 8 {
 		t.Fatalf("expected 8 batch jobs, got %d", batchResponse.TotalJobs)
+	}
+}
+
+func TestGoofishAdminActions(t *testing.T) {
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	items, err := service.ListGoofishStateFiles(context.Background())
+	if err != nil {
+		t.Fatalf("ListGoofishStateFiles() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 state file, got %d", len(items))
+	}
+	response, err := service.ValidateGoofishState(context.Background(), model.GoofishValidateRequest{AccountStateFile: "goofish_state.json"})
+	if err != nil {
+		t.Fatalf("ValidateGoofishState() error = %v", err)
+	}
+	if !response.Valid {
+		t.Fatal("expected goofish state to be valid")
 	}
 }
 

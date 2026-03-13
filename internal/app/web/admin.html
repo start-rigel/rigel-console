@@ -185,6 +185,7 @@
         <a href="/admin/products" data-tab="products">商品管理</a>
         <a href="/admin/parts" data-tab="parts">配件管理</a>
         <a href="/admin/catalog" data-tab="catalog">价格目录</a>
+        <a href="/admin/goofish" data-tab="goofish">闲鱼状态</a>
         <a href="/admin/jobs" data-tab="jobs">任务状态</a>
         <a href="/">返回前台</a>
       </nav>
@@ -285,6 +286,23 @@
           ["来源拆分", item => `<span class="mono">${(item.source_breakdown || []).map(entry => `${entry.source_platform}:${entry.sample_count}`).join(" | ") || "-"}</span>`]
         ]
       },
+      goofish: {
+        title: "闲鱼状态",
+        subtitle: "读取 rigel-goofish-collector 的状态文件接口，便于验证真实登录态是否可用。",
+        source: "rigel-goofish-collector /api/v1/state-files",
+        endpoint: "/api/admin/goofish/state-files",
+        queryKey: "",
+        supportsCollect: false,
+        columns: [
+          ["文件名", item => item.name || "-"],
+          ["默认", item => item.is_root ? "yes" : "no"],
+          ["路径", item => `<span class="mono">${item.path || "-"}</span>`],
+          ["操作", item => `
+            <button class="ghost small validate-goofish-button" data-file-name="${item.name || ""}">验证</button>
+            <button class="ghost small promote-goofish-button" data-file-name="${item.name || ""}">设为默认</button>
+          `]
+        ]
+      },
       jobs: {
         title: "任务状态",
         subtitle: "读取 rigel-jd-collector 的最近任务接口，便于查看采集执行结果和重试任务。",
@@ -306,6 +324,7 @@
     const currentTab = (() => {
       if (location.pathname.includes("/admin/parts")) return "parts";
       if (location.pathname.includes("/admin/catalog")) return "catalog";
+      if (location.pathname.includes("/admin/goofish")) return "goofish";
       if (location.pathname.includes("/admin/jobs")) return "jobs";
       return "products";
     })();
@@ -423,6 +442,49 @@
             });
           });
         }
+        if (currentTab === "goofish") {
+          contentEl.querySelectorAll(".validate-goofish-button").forEach(button => {
+            button.addEventListener("click", async () => {
+              const fileName = button.dataset.fileName;
+              button.disabled = true;
+              try {
+                const res = await fetch("/api/admin/goofish/state/validate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ account_state_file: fileName })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `request failed with status ${res.status}`);
+                showStatus(`状态文件 ${data.state_file} 验证通过，命中 ${data.sample_count || 0} 条样本。`, "ok");
+              } catch (error) {
+                showStatus(`验证失败: ${error.message}`, "warn");
+              } finally {
+                button.disabled = false;
+              }
+            });
+          });
+          contentEl.querySelectorAll(".promote-goofish-button").forEach(button => {
+            button.addEventListener("click", async () => {
+              const fileName = button.dataset.fileName;
+              button.disabled = true;
+              try {
+                const res = await fetch("/api/admin/goofish/state/default", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ file_name: fileName })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `request failed with status ${res.status}`);
+                showStatus(`默认状态已切换为 ${data.item?.name || fileName}。`, "ok");
+                await loadData();
+              } catch (error) {
+                showStatus(`切换默认状态失败: ${error.message}`, "warn");
+              } finally {
+                button.disabled = false;
+              }
+            });
+          });
+        }
       } catch (error) {
         contentEl.innerHTML = `<div class="empty">加载失败: ${error.message}</div>`;
       }
@@ -438,6 +500,9 @@
     if (currentTab === "catalog") {
       keywordEl.value = "gaming";
       keywordEl.placeholder = "输入用途，例如 gaming / office / design";
+    }
+    if (currentTab === "goofish") {
+      keywordEl.classList.add("hidden");
     }
 
     if (config.supportsCollect) {

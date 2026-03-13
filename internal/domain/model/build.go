@@ -172,6 +172,25 @@ type AdminCollectBatchItem struct {
 	Error    string                `json:"error,omitempty"`
 }
 
+type GoofishStateFile struct {
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+	IsRoot bool   `json:"is_root"`
+}
+
+type GoofishValidateRequest struct {
+	Strategy         string `json:"strategy,omitempty"`
+	AccountStateFile string `json:"account_state_file,omitempty"`
+}
+
+type GoofishValidateResponse struct {
+	Valid       bool   `json:"valid"`
+	StateFile   string `json:"state_file"`
+	Keyword     string `json:"keyword"`
+	SampleCount int    `json:"sample_count"`
+	PageURL     string `json:"page_url,omitempty"`
+}
+
 // BuildEngineResponse mirrors the build-engine response contract.
 type BuildEngineResponse struct {
 	BuildRequestID string              `json:"build_request_id"`
