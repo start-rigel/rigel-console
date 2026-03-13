@@ -11,10 +11,12 @@ type BuildEngineClient interface {
 	GenerateBuild(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEngineResponse, error)
 	GetBuild(ctx context.Context, buildID string) (model.BuildEngineResponse, error)
 	SearchParts(ctx context.Context, keyword string, limit int) ([]model.PartSearchResult, error)
+	GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error)
 }
 
 type AIAdvisorClient interface {
 	GenerateAdvice(ctx context.Context, build model.BuildEngineResponse) (model.AIAdvisorResponse, error)
+	GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error)
 }
 
 type JDCollectorClient interface {
@@ -41,6 +43,23 @@ func (s *Service) GenerateBuild(ctx context.Context, req model.GenerateBuildRequ
 		return model.BuildResponse{}, err
 	}
 	return s.composeBuildResponse(ctx, build)
+}
+
+func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest) (model.CatalogRecommendationResponse, error) {
+	catalog, err := s.buildClient.GetPriceCatalog(ctx, req)
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
+	advice, err := s.aiClient.GenerateCatalogAdvice(ctx, req, catalog)
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
+	return model.CatalogRecommendationResponse{
+		CatalogItemCount: len(catalog.Items),
+		CatalogWarnings:  catalog.Warnings,
+		Selection:        advice.Selection,
+		Advice:           &advice.Advisory,
+	}, nil
 }
 
 func (s *Service) GetBuild(ctx context.Context, buildID string) (model.BuildResponse, error) {

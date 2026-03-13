@@ -13,8 +13,9 @@ Phase 6 minimum viable implementation.
 ## Implemented
 
 - aggregates build-engine and ai-advisor over HTTP
+- exposes a price-catalog-first recommendation flow through `POST /catalog/recommend`
 - exposes `POST /build/generate`, `GET /build/{id}`, and `GET /parts/search`
-- serves an embedded frontend page for build generation
+- serves an embedded frontend page for price-catalog recommendation
 - serves admin pages backed by collector/build-engine APIs for products, parts, and jobs
 - supports triggering JD collection and retrying collector jobs from the admin surface
 - supports triggering the `mvp_base` batch collection preset from the admin surface
@@ -24,6 +25,7 @@ Phase 6 minimum viable implementation.
 ## Routes
 
 - `GET /healthz`
+- `POST /catalog/recommend`
 - `POST /build/generate`
 - `GET /build/{id}`
 - `GET /parts/search?keyword=ryzen&limit=10`
@@ -42,5 +44,6 @@ Phase 6 minimum viable implementation.
 
 - Console does not implement compatibility logic.
 - Console relies on `rigel-build-engine`, `rigel-ai-advisor`, and `rigel-jd-collector` being reachable over HTTP.
+- The homepage now defaults to `price catalog -> AI recommendation draft`; the older `/build/generate` route is kept for the structured build flow.
 - Admin pages are intentionally lightweight and proxy existing service APIs instead of reading databases directly.
 - Admin product management is now expected to default to real JD data and can narrow further to JD self-operated products.

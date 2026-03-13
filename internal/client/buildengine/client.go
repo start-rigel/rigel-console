@@ -46,6 +46,18 @@ func (c *Client) SearchParts(ctx context.Context, keyword string, limit int) ([]
 	return response.Items, nil
 }
 
+func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
+	query := url.Values{}
+	if req.UseCase != "" {
+		query.Set("use_case", req.UseCase)
+	}
+	if req.BuildMode != "" {
+		query.Set("build_mode", req.BuildMode)
+	}
+	query.Set("limit", "500")
+	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil)
+}
+
 func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target string, payload any) (T, error) {
 	var zero T
 	var body *bytes.Reader

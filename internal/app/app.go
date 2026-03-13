@@ -33,6 +33,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/admin/parts", a.handleAdminParts)
 	mux.HandleFunc("/api/admin/jobs", a.handleAdminJobs)
 	mux.HandleFunc("/api/admin/jobs/", a.handleAdminJobRoutes)
+	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
 	mux.HandleFunc("/build/generate", a.handleGenerateBuild)
 	mux.HandleFunc("/build/", a.handleGetBuild)
 	mux.HandleFunc("/parts/search", a.handleSearchParts)
@@ -57,6 +58,24 @@ func (a *App) handleGenerateBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response, err := a.console.GenerateBuild(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *App) handleGenerateCatalogRecommendation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req model.GenerateBuildRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	response, err := a.console.GenerateCatalogRecommendation(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return

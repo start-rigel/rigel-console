@@ -46,3 +46,34 @@ func (c *Client) GenerateAdvice(ctx context.Context, build model.BuildEngineResp
 	}
 	return response, nil
 }
+
+func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error) {
+	payload := map[string]any{
+		"budget":     req.Budget,
+		"use_case":   req.UseCase,
+		"build_mode": req.BuildMode,
+		"catalog":    catalog,
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return model.AIAdvisorCatalogResponse{}, fmt.Errorf("marshal request: %w", err)
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", bytes.NewReader(encoded))
+	if err != nil {
+		return model.AIAdvisorCatalogResponse{}, fmt.Errorf("new request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return model.AIAdvisorCatalogResponse{}, fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= http.StatusBadRequest {
+		return model.AIAdvisorCatalogResponse{}, fmt.Errorf("upstream ai-advisor returned %d", resp.StatusCode)
+	}
+	var response model.AIAdvisorCatalogResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return model.AIAdvisorCatalogResponse{}, fmt.Errorf("decode response: %w", err)
+	}
+	return response, nil
+}

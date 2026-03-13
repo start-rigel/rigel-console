@@ -124,7 +124,7 @@
       <div class="panel form-panel">
         <p class="pill">Rigel Console</p>
         <h1 class="title">PC Build<br>Navigator</h1>
-        <p class="subtitle">输入预算、用途和模式，Console 会先调用 build-engine 生成结构化配置，再调用 ai-advisor 输出面向用户的解释。</p>
+        <p class="subtitle">输入预算、用途和模式，Console 会先拉取 build-engine 的聚合价格目录，再调用 ai-advisor 生成一份可读的采购草案。</p>
         <form id="build-form">
           <label>预算
             <input id="budget" type="number" min="1000" step="100" value="6000" required>
@@ -143,11 +143,11 @@
               <option value="used_only">used_only</option>
             </select>
           </label>
-          <button type="submit">Generate Build</button>
+          <button type="submit">Generate Recommendation</button>
         </form>
       </div>
       <div class="panel metrics">
-        <div class="metric"><span class="pill">API</span><strong>POST /build/generate</strong><span>应用层会自动聚合 build-engine 与 ai-advisor。</span></div>
+        <div class="metric"><span class="pill">API</span><strong>POST /catalog/recommend</strong><span>应用层会自动聚合价格目录与 AI 推荐草案。</span></div>
         <div class="metric"><span class="pill">Admin</span><strong>占位后台</strong><span>商品管理、配件管理、任务状态先以轻量入口保留。</span></div>
         <div class="admin-links">
           <a href="/admin/products">商品管理</a>
@@ -164,20 +164,19 @@
     const form = document.getElementById('build-form');
     const results = document.getElementById('results');
 
-    function render(response) {
-      const items = response.items.map(item => `
+    function renderCatalog(response) {
+      const items = (response.selection?.selected_items || []).map(item => `
         <div class="item">
           <strong>${item.category}</strong>
           <div>
             <div>${item.display_name}</div>
-            <small>${item.source}${item.reasons?.length ? ' · ' + item.reasons[0] : ''}</small>
+            <small>${(item.source_platforms || []).join(', ') || 'catalog'}${item.reasons?.length ? ' · ' + item.reasons[0] : ''}</small>
           </div>
-          <div>¥${Math.round(item.unit_price)}</div>
+          <div>¥${Math.round(item.selected_price || 0)}</div>
         </div>
       `).join('');
 
-      const warnings = (response.warnings || []).map(w => `<li class="warning">${w}</li>`).join('') || '<li>当前没有额外警告。</li>';
-      const alternatives = (response.alternatives || []).map(alt => `<li>${alt.label}: ¥${Math.round(alt.total_price)}</li>`).join('') || '<li>暂无备选。</li>';
+      const warnings = ([...(response.catalog_warnings || []), ...((response.selection && response.selection.warnings) || [])]).map(w => `<li class="warning">${w}</li>`).join('') || '<li>当前没有额外警告。</li>';
       const advice = response.advice ? `
         <div class="panel card">
           <h3>AI Advice</h3>
@@ -191,18 +190,15 @@
       results.innerHTML = `
         <div class="result-grid">
           <div class="panel card">
-            <h2>Build #${response.build_id}</h2>
-            <p><strong>Total:</strong> ¥${Math.round(response.total_price)} ${response.currency || ''}</p>
+            <h2>Catalog Recommendation</h2>
+            <p><strong>Estimated Total:</strong> ¥${Math.round(response.selection?.estimated_total || 0)}</p>
+            <p><strong>Catalog Items:</strong> ${response.catalog_item_count || 0}</p>
             <div class="item-list">${items}</div>
           </div>
           <div>
             <div class="panel card">
               <h3>Warnings</h3>
               <ul class="advice-list">${warnings}</ul>
-            </div>
-            <div class="panel card">
-              <h3>Alternatives</h3>
-              <ul class="alt-list">${alternatives}</ul>
             </div>
             ${advice}
           </div>
@@ -219,14 +215,14 @@
         build_mode: document.getElementById('build_mode').value,
       };
       try {
-        const res = await fetch('/build/generate', {
+        const res = await fetch('/catalog/recommend', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'request failed');
-        render(data);
+        renderCatalog(data);
       } catch (error) {
         results.innerHTML = `<div class="panel card warning">${error.message}</div>`;
       }

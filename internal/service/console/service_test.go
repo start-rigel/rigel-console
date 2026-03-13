@@ -22,8 +22,33 @@ func (buildClientStub) GetBuild(context.Context, string) (model.BuildEngineRespo
 func (buildClientStub) SearchParts(context.Context, string, int) ([]model.PartSearchResult, error) {
 	return []model.PartSearchResult{{ID: "part-1", Category: "CPU", Brand: "AMD", Model: "Ryzen 5 7500F", DisplayName: "CPU AMD Ryzen 5 7500F"}}, nil
 }
+func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
+	return model.BuildEnginePriceCatalog{
+		UseCase:   "gaming",
+		BuildMode: "mixed",
+		Items: []model.BuildEngineCatalogItem{
+			{Category: "CPU", DisplayName: "Ryzen 5 7500F", NormalizedKey: "cpu:7500f", MedianPrice: 899, AvgPrice: 920, SampleCount: 5},
+			{Category: "GPU", DisplayName: "RTX 4060", NormalizedKey: "gpu:rtx4060", MedianPrice: 2399, AvgPrice: 2410, SampleCount: 6},
+		},
+	}, nil
+}
 func (aiClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AIAdvisorResponse, error) {
 	return model.AIAdvisorResponse{Advisory: model.Advice{Summary: "说明文本", Reasons: []string{"原因"}}}, nil
+}
+func (aiClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error) {
+	return model.AIAdvisorCatalogResponse{
+		Selection: model.CatalogSelection{
+			Budget:         6000,
+			UseCase:        "gaming",
+			BuildMode:      "mixed",
+			EstimatedTotal: 3298,
+			SelectedItems: []model.CatalogRecommendationItem{
+				{Category: "CPU", DisplayName: "Ryzen 5 7500F", SelectedPrice: 899},
+				{Category: "GPU", DisplayName: "RTX 4060", SelectedPrice: 2399},
+			},
+		},
+		Advisory: model.Advice{Summary: "目录推荐说明", Reasons: []string{"价格目录已聚合"}},
+	}, nil
 }
 func (jdClientStub) ListProducts(context.Context, model.AdminProductFilter) ([]model.AdminProduct, error) {
 	return []model.AdminProduct{{ID: "product-1", Title: "RTX 4060 官方自营", Price: 1999, Currency: "CNY", Availability: "in_stock"}}, nil
@@ -52,6 +77,20 @@ func TestGenerateBuild(t *testing.T) {
 	}
 	if response.Advice == nil {
 		t.Fatal("expected advice")
+	}
+}
+
+func TestGenerateCatalogRecommendation(t *testing.T) {
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	response, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
+	if err != nil {
+		t.Fatalf("GenerateCatalogRecommendation() error = %v", err)
+	}
+	if response.CatalogItemCount != 2 {
+		t.Fatalf("expected 2 catalog items, got %d", response.CatalogItemCount)
+	}
+	if response.Advice == nil || response.Advice.Summary == "" {
+		t.Fatal("expected catalog advice")
 	}
 }
 
