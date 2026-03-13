@@ -227,6 +227,33 @@
         </div>
       </div>
 
+      <div id="goofish-panel" class="stack hidden">
+        <div>
+          <h2>闲鱼联调</h2>
+          <p>验证登录态、发起二手样本搜索，并查看过滤统计和即时行情 summary。</p>
+        </div>
+        <div class="action-grid">
+          <input id="goofish-keyword" type="search" placeholder="搜索关键词，例如 DDR5 6000 32G">
+          <select id="goofish-category">
+            <option value="RAM">RAM</option>
+            <option value="CPU">CPU</option>
+            <option value="GPU">GPU</option>
+            <option value="MB">MB</option>
+            <option value="SSD">SSD</option>
+            <option value="PSU">PSU</option>
+            <option value="CASE">CASE</option>
+            <option value="COOLER">COOLER</option>
+          </select>
+          <select id="goofish-limit">
+            <option value="5">5 条</option>
+            <option value="10" selected>10 条</option>
+            <option value="20">20 条</option>
+          </select>
+          <button id="goofish-search-submit" class="accent" type="button">搜索样本</button>
+          <button id="goofish-summary-submit" class="ghost" type="button">行情汇总</button>
+        </div>
+      </div>
+
       <div class="meta">
         <span class="badge" id="source-label">Source</span>
         <span class="badge" id="count-label">0 items</span>
@@ -349,6 +376,12 @@
     const collectPersistEl = document.getElementById("collect-persist");
     const collectSubmitEl = document.getElementById("collect-submit");
     const collectPresetSubmitEl = document.getElementById("collect-preset-submit");
+    const goofishPanelEl = document.getElementById("goofish-panel");
+    const goofishKeywordEl = document.getElementById("goofish-keyword");
+    const goofishCategoryEl = document.getElementById("goofish-category");
+    const goofishLimitEl = document.getElementById("goofish-limit");
+    const goofishSearchSubmitEl = document.getElementById("goofish-search-submit");
+    const goofishSummarySubmitEl = document.getElementById("goofish-summary-submit");
 
     titleEl.textContent = config.title;
     subtitleEl.textContent = config.subtitle;
@@ -365,6 +398,9 @@
     }
     if (config.supportsCollect) {
       collectPanelEl.classList.remove("hidden");
+    }
+    if (currentTab === "goofish") {
+      goofishPanelEl.classList.remove("hidden");
     }
 
     function showStatus(message, type = "ok") {
@@ -503,6 +539,7 @@
     }
     if (currentTab === "goofish") {
       keywordEl.classList.add("hidden");
+      goofishKeywordEl.value = "DDR5 6000 32G";
     }
 
     if (config.supportsCollect) {
@@ -563,6 +600,71 @@
         } finally {
           collectPresetSubmitEl.disabled = false;
         }
+      });
+    }
+
+    if (currentTab === "goofish") {
+      const runGoofishAction = async (endpoint) => {
+        const keyword = goofishKeywordEl.value.trim();
+        if (!keyword) {
+          showStatus("闲鱼搜索关键词不能为空。", "warn");
+          return;
+        }
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              keyword,
+              category: goofishCategoryEl.value,
+              limit: Number(goofishLimitEl.value)
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `request failed with status ${res.status}`);
+          if (endpoint.endsWith("market-summary")) {
+            const stats = Object.entries(data.filter_stats || {}).map(([key, value]) => `${key}:${value}`).join(" | ") || "none";
+            const avg = data.summary?.avg_price ?? "-";
+            const median = data.summary?.median_price ?? "-";
+            showStatus(`汇总完成：样本 ${data.summary?.sample_count || 0} 条，均价 ${avg}，中位价 ${median}，过滤 ${data.filtered_count || 0} 条。`, "ok");
+            contentEl.innerHTML = `<div class="empty">过滤统计: ${stats}<br>状态文件: ${data.state_file || "-"}<br>raw=${data.raw_result_count || 0}, kept=${data.summary?.sample_count || 0}</div>`;
+            countLabelEl.textContent = `${data.summary?.sample_count || 0} items`;
+          } else {
+            const stats = Object.entries(data.filter_stats || {}).map(([key, value]) => `${key}:${value}`).join(" | ") || "none";
+            showStatus(`搜索完成：raw ${data.raw_result_count || 0}，保留 ${data.sample_count || 0}，过滤 ${data.filtered_count || 0}。`, "ok");
+            const rows = (data.products || []).map(item => `
+              <tr>
+                <td data-label="标题">${item.title || "-"}</td>
+                <td data-label="价格">${item.price || 0} ${item.currency || "CNY"}</td>
+                <td data-label="卖家">${item.seller || "-"}</td>
+                <td data-label="地区">${item.area || "-"}</td>
+                <td data-label="链接"><span class="mono">${item.url || "-"}</span></td>
+              </tr>
+            `).join("");
+            contentEl.innerHTML = `
+              <div class="empty">过滤统计: ${stats}<br>状态文件: ${data.state_file || "-"}<br>raw=${data.raw_result_count || 0}, kept=${data.sample_count || 0}</div>
+              <table>
+                <thead><tr><th>标题</th><th>价格</th><th>卖家</th><th>地区</th><th>链接</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="5">无结果</td></tr>'}</tbody>
+              </table>
+            `;
+            countLabelEl.textContent = `${data.sample_count || 0} items`;
+          }
+        } catch (error) {
+          showStatus(`闲鱼请求失败: ${error.message}`, "warn");
+        }
+      };
+
+      goofishSearchSubmitEl.addEventListener("click", async () => {
+        goofishSearchSubmitEl.disabled = true;
+        await runGoofishAction("/api/admin/goofish/search");
+        goofishSearchSubmitEl.disabled = false;
+      });
+
+      goofishSummarySubmitEl.addEventListener("click", async () => {
+        goofishSummarySubmitEl.disabled = true;
+        await runGoofishAction("/api/admin/goofish/market-summary");
+        goofishSummarySubmitEl.disabled = false;
       });
     }
 

@@ -191,6 +191,73 @@ type GoofishValidateResponse struct {
 	PageURL     string `json:"page_url,omitempty"`
 }
 
+type GoofishSearchRequest struct {
+	Keyword          string `json:"keyword"`
+	Category         string `json:"category,omitempty"`
+	Limit            int    `json:"limit,omitempty"`
+	Strategy         string `json:"strategy,omitempty"`
+	AccountStateFile string `json:"account_state_file,omitempty"`
+	Persist          bool   `json:"persist,omitempty"`
+}
+
+type GoofishSearchProduct struct {
+	SourcePlatform string         `json:"source_platform,omitempty"`
+	Keyword        string         `json:"keyword,omitempty"`
+	Category       string         `json:"category,omitempty"`
+	ItemID         string         `json:"item_id,omitempty"`
+	Title          string         `json:"title"`
+	Price          float64        `json:"price"`
+	Currency       string         `json:"currency,omitempty"`
+	Seller         string         `json:"seller,omitempty"`
+	Area           string         `json:"area,omitempty"`
+	URL            string         `json:"url,omitempty"`
+	ImageURL       string         `json:"image_url,omitempty"`
+	PublishedAt    string         `json:"published_at,omitempty"`
+	Tags           []string       `json:"tags,omitempty"`
+	RawPayload     map[string]any `json:"raw_payload,omitempty"`
+}
+
+type GoofishSearchResponse struct {
+	Keyword        string                 `json:"keyword"`
+	Category       string                 `json:"category,omitempty"`
+	StateFile      string                 `json:"state_file,omitempty"`
+	Limit          int                    `json:"limit,omitempty"`
+	RawResultCount int                    `json:"raw_result_count,omitempty"`
+	FilteredCount  int                    `json:"filtered_count,omitempty"`
+	FilterStats    map[string]int         `json:"filter_stats,omitempty"`
+	SampleCount    int                    `json:"sample_count"`
+	PageURL        string                 `json:"page_url,omitempty"`
+	Persisted      bool                   `json:"persisted,omitempty"`
+	PersistedCount int                    `json:"persisted_count,omitempty"`
+	JobID          string                 `json:"job_id,omitempty"`
+	Products       []GoofishSearchProduct `json:"products,omitempty"`
+}
+
+type GoofishMarketSummary struct {
+	Keyword     string   `json:"keyword"`
+	Category    string   `json:"category,omitempty"`
+	SampleCount int      `json:"sample_count"`
+	LatestPrice *float64 `json:"latest_price,omitempty"`
+	AvgPrice    *float64 `json:"avg_price,omitempty"`
+	MedianPrice *float64 `json:"median_price,omitempty"`
+	P25Price    *float64 `json:"p25_price,omitempty"`
+	P75Price    *float64 `json:"p75_price,omitempty"`
+}
+
+type GoofishMarketSummaryResponse struct {
+	Keyword        string                 `json:"keyword"`
+	Category       string                 `json:"category,omitempty"`
+	StateFile      string                 `json:"state_file,omitempty"`
+	Summary        GoofishMarketSummary   `json:"summary"`
+	RawResultCount int                    `json:"raw_result_count,omitempty"`
+	FilteredCount  int                    `json:"filtered_count,omitempty"`
+	FilterStats    map[string]int         `json:"filter_stats,omitempty"`
+	Persisted      bool                   `json:"persisted,omitempty"`
+	PersistedCount int                    `json:"persisted_count,omitempty"`
+	JobID          string                 `json:"job_id,omitempty"`
+	Products       []GoofishSearchProduct `json:"products,omitempty"`
+}
+
 // BuildEngineResponse mirrors the build-engine response contract.
 type BuildEngineResponse struct {
 	BuildRequestID string              `json:"build_request_id"`

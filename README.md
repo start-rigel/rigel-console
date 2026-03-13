@@ -37,6 +37,8 @@ Phase 6 minimum viable implementation.
 - `GET /api/admin/goofish/state-files`
 - `POST /api/admin/goofish/state/validate`
 - `POST /api/admin/goofish/state/default`
+- `POST /api/admin/goofish/search`
+- `POST /api/admin/goofish/market-summary`
 - `GET /api/admin/products?keyword=4060&limit=10`
 - `GET /api/admin/parts?keyword=ryzen&limit=10`
 - `GET /api/admin/jobs?limit=10`

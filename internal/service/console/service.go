@@ -31,6 +31,8 @@ type GoofishCollectorClient interface {
 	ListStateFiles(ctx context.Context) ([]model.GoofishStateFile, error)
 	PromoteStateFile(ctx context.Context, fileName string) (model.GoofishStateFile, error)
 	ValidateState(ctx context.Context, req model.GoofishValidateRequest) (model.GoofishValidateResponse, error)
+	Search(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishSearchResponse, error)
+	MarketSummary(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error)
 }
 
 type Service struct {
@@ -107,6 +109,14 @@ func (s *Service) PromoteGoofishStateFile(ctx context.Context, fileName string) 
 
 func (s *Service) ValidateGoofishState(ctx context.Context, req model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
 	return s.goofishClient.ValidateState(ctx, req)
+}
+
+func (s *Service) SearchGoofish(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishSearchResponse, error) {
+	return s.goofishClient.Search(ctx, req)
+}
+
+func (s *Service) SummarizeGoofish(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error) {
+	return s.goofishClient.MarketSummary(ctx, req)
 }
 
 func (s *Service) StartAdminCollection(ctx context.Context, req model.AdminCollectRequest) (model.AdminCollectResponse, error) {

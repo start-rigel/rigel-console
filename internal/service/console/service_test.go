@@ -75,6 +75,40 @@ func (goofishClientStub) PromoteStateFile(context.Context, string) (model.Goofis
 func (goofishClientStub) ValidateState(context.Context, model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
 	return model.GoofishValidateResponse{Valid: true, StateFile: "goofish_state.json", Keyword: "电脑 内存", SampleCount: 1}, nil
 }
+func (goofishClientStub) Search(context.Context, model.GoofishSearchRequest) (model.GoofishSearchResponse, error) {
+	return model.GoofishSearchResponse{
+		Keyword:        "DDR5 6000 32G",
+		Category:       "RAM",
+		StateFile:      "goofish_state.json",
+		RawResultCount: 3,
+		FilteredCount:  1,
+		FilterStats:    map[string]int{"wanted_post": 1},
+		SampleCount:    2,
+		Products: []model.GoofishSearchProduct{
+			{Title: "光威 DDR5 6000 32G", Price: 2000, SourcePlatform: "xianyu"},
+			{Title: "金士顿 DDR5 6000 32G", Price: 2500, SourcePlatform: "xianyu"},
+		},
+	}, nil
+}
+func (goofishClientStub) MarketSummary(context.Context, model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error) {
+	avg := 2250.0
+	median := 2250.0
+	return model.GoofishMarketSummaryResponse{
+		Keyword:        "DDR5 6000 32G",
+		Category:       "RAM",
+		StateFile:      "goofish_state.json",
+		RawResultCount: 3,
+		FilteredCount:  1,
+		FilterStats:    map[string]int{"wanted_post": 1},
+		Summary: model.GoofishMarketSummary{
+			Keyword:     "DDR5 6000 32G",
+			Category:    "RAM",
+			SampleCount: 2,
+			AvgPrice:    &avg,
+			MedianPrice: &median,
+		},
+	}, nil
+}
 
 func TestGenerateBuild(t *testing.T) {
 	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
@@ -183,6 +217,20 @@ func TestGoofishAdminActions(t *testing.T) {
 	}
 	if !response.Valid {
 		t.Fatal("expected goofish state to be valid")
+	}
+	searchResponse, err := service.SearchGoofish(context.Background(), model.GoofishSearchRequest{Keyword: "DDR5 6000 32G", Category: "RAM"})
+	if err != nil {
+		t.Fatalf("SearchGoofish() error = %v", err)
+	}
+	if searchResponse.FilteredCount != 1 {
+		t.Fatalf("expected filtered_count 1, got %d", searchResponse.FilteredCount)
+	}
+	summaryResponse, err := service.SummarizeGoofish(context.Background(), model.GoofishSearchRequest{Keyword: "DDR5 6000 32G", Category: "RAM"})
+	if err != nil {
+		t.Fatalf("SummarizeGoofish() error = %v", err)
+	}
+	if summaryResponse.Summary.SampleCount != 2 {
+		t.Fatalf("expected summary sample count 2, got %d", summaryResponse.Summary.SampleCount)
 	}
 }
 

@@ -78,6 +78,17 @@ func (goofishClientStub) PromoteStateFile(context.Context, string) (model.Goofis
 func (goofishClientStub) ValidateState(context.Context, model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
 	return model.GoofishValidateResponse{Valid: true, StateFile: "goofish_state.json", Keyword: "电脑 内存", SampleCount: 1}, nil
 }
+func (goofishClientStub) Search(context.Context, model.GoofishSearchRequest) (model.GoofishSearchResponse, error) {
+	return model.GoofishSearchResponse{Keyword: "DDR5 6000 32G", Category: "RAM", SampleCount: 2}, nil
+}
+func (goofishClientStub) MarketSummary(context.Context, model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error) {
+	avg := 2250.0
+	return model.GoofishMarketSummaryResponse{
+		Keyword:  "DDR5 6000 32G",
+		Category: "RAM",
+		Summary:  model.GoofishMarketSummary{Keyword: "DDR5 6000 32G", Category: "RAM", SampleCount: 2, AvgPrice: &avg},
+	}, nil
+}
 
 func TestIndex(t *testing.T) {
 	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
@@ -177,6 +188,28 @@ func TestAdminGoofishValidate(t *testing.T) {
 	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"account_state_file":"goofish_state.json"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/state/validate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminGoofishSearch(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	body := []byte(`{"keyword":"DDR5 6000 32G","category":"RAM","limit":10}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/search", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminGoofishMarketSummary(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	body := []byte(`{"keyword":"DDR5 6000 32G","category":"RAM","limit":10}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/market-summary", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

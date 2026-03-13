@@ -50,6 +50,14 @@ func (c *Client) ValidateState(ctx context.Context, req model.GoofishValidateReq
 	return doJSON[model.GoofishValidateResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/validate-state", req)
 }
 
+func (c *Client) Search(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishSearchResponse, error) {
+	return doJSON[model.GoofishSearchResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/search", req)
+}
+
+func (c *Client) MarketSummary(ctx context.Context, req model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error) {
+	return doJSON[model.GoofishMarketSummaryResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/market/summary", req)
+}
+
 func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target string, payload any) (T, error) {
 	var zero T
 	var body *bytes.Reader
