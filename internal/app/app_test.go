@@ -111,6 +111,16 @@ func TestAdminProducts(t *testing.T) {
 	}
 }
 
+func TestAdminCatalogPrices(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/catalog/prices?use_case=gaming&build_mode=mixed", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestAdminCollectSearch(t *testing.T) {
 	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}))
 	body := []byte(`{"keyword":"RTX 4060","category":"GPU","limit":2,"persist":true}`)

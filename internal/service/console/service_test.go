@@ -94,6 +94,17 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 	}
 }
 
+func TestGetAdminPriceCatalog(t *testing.T) {
+	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
+	response, err := service.GetAdminPriceCatalog(context.Background(), model.GenerateBuildRequest{UseCase: "gaming", BuildMode: "mixed"})
+	if err != nil {
+		t.Fatalf("GetAdminPriceCatalog() error = %v", err)
+	}
+	if len(response.Items) != 2 {
+		t.Fatalf("expected 2 catalog items, got %d", len(response.Items))
+	}
+}
+
 func TestListAdminData(t *testing.T) {
 	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{})
 

@@ -82,6 +82,10 @@ func (s *Service) ListAdminParts(ctx context.Context, keyword string, limit int)
 	return s.buildClient.SearchParts(ctx, keyword, limit)
 }
 
+func (s *Service) GetAdminPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
+	return s.buildClient.GetPriceCatalog(ctx, req)
+}
+
 func (s *Service) ListAdminJobs(ctx context.Context, limit int) ([]model.AdminJob, error) {
 	return s.jdClient.ListJobs(ctx, limit)
 }

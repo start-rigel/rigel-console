@@ -184,6 +184,7 @@
       <nav>
         <a href="/admin/products" data-tab="products">商品管理</a>
         <a href="/admin/parts" data-tab="parts">配件管理</a>
+        <a href="/admin/catalog" data-tab="catalog">价格目录</a>
         <a href="/admin/jobs" data-tab="jobs">任务状态</a>
         <a href="/">返回前台</a>
       </nav>
@@ -267,6 +268,23 @@
           ["ID", item => `<span class="mono">${item.id || "-"}</span>`]
         ]
       },
+      catalog: {
+        title: "价格目录",
+        subtitle: "读取 rigel-build-engine 的聚合价格目录接口，确认 canonical model、样本量和平台拆分结果。",
+        source: "rigel-build-engine /api/v1/catalog/prices",
+        endpoint: "/api/admin/catalog/prices",
+        queryKey: "use_case",
+        supportsCollect: false,
+        columns: [
+          ["类别", item => item.category || "-"],
+          ["展示名", item => item.display_name || "-"],
+          ["样本", item => String(item.sample_count || 0)],
+          ["中位价", item => `${Math.round(item.median_price || 0)} CNY`],
+          ["均价", item => `${Math.round(item.avg_price || 0)} CNY`],
+          ["平台", item => (item.platforms || []).join(", ") || "-"],
+          ["来源拆分", item => `<span class="mono">${(item.source_breakdown || []).map(entry => `${entry.source_platform}:${entry.sample_count}`).join(" | ") || "-"}</span>`]
+        ]
+      },
       jobs: {
         title: "任务状态",
         subtitle: "读取 rigel-jd-collector 的最近任务接口，便于查看采集执行结果和重试任务。",
@@ -287,6 +305,7 @@
 
     const currentTab = (() => {
       if (location.pathname.includes("/admin/parts")) return "parts";
+      if (location.pathname.includes("/admin/catalog")) return "catalog";
       if (location.pathname.includes("/admin/jobs")) return "jobs";
       return "products";
     })();
@@ -342,9 +361,14 @@
 
     async function loadData() {
       const params = new URLSearchParams();
-      params.set("limit", "20");
+      if (currentTab !== "catalog") {
+        params.set("limit", "20");
+      }
       if (config.queryKey && keywordEl.value.trim()) {
         params.set(config.queryKey, keywordEl.value.trim());
+      }
+      if (currentTab === "catalog") {
+        params.set("build_mode", "mixed");
       }
       if (currentTab === "products") {
         if (realOnlyEl.checked) params.set("real_only", "true");
@@ -360,6 +384,9 @@
         const data = await res.json();
         const items = data.items || [];
         countLabelEl.textContent = `${items.length} items`;
+        if (currentTab === "catalog" && data.warnings && data.warnings.length) {
+          showStatus(`目录警告：${data.warnings.join("；")}`, "warn");
+        }
         if (!items.length) {
           contentEl.innerHTML = '<div class="empty">当前没有可展示的数据。</div>';
           return;
@@ -407,6 +434,11 @@
     });
     realOnlyEl?.addEventListener("change", loadData);
     selfOperatedOnlyEl?.addEventListener("change", loadData);
+
+    if (currentTab === "catalog") {
+      keywordEl.value = "gaming";
+      keywordEl.placeholder = "输入用途，例如 gaming / office / design";
+    }
 
     if (config.supportsCollect) {
       collectSubmitEl.addEventListener("click", async () => {
