@@ -47,6 +47,6 @@ Phase 6 minimum viable implementation.
 
 - Console does not implement compatibility logic.
 - Console relies on `rigel-build-engine` and `rigel-jd-collector` being reachable over HTTP.
-- The homepage now defaults to `price catalog -> AI recommendation draft`; the older `/build/generate` route is kept for the structured build flow.
+- The homepage now defaults to `UI params -> build-engine organized hardware info -> AI analysis result`.
 - Admin pages are intentionally lightweight and proxy existing service APIs instead of reading databases directly.
 - Admin product management is now expected to default to real JD data and can narrow further to JD self-operated products.
