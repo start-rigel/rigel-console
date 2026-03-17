@@ -124,7 +124,7 @@
       <div class="panel form-panel">
         <p class="pill">Rigel Console</p>
         <h1 class="title">PC Build<br>Navigator</h1>
-        <p class="subtitle">输入预算、用途和模式，Console 会先拉取 build-engine 的聚合价格目录，再调用 ai-advisor 生成一份可读的采购草案。</p>
+        <p class="subtitle">输入预算、用途和模式，Console 会先拉取 build-engine 的聚合价格目录，再由 build-engine 直接生成一份可读的采购草案。</p>
         <form id="build-form">
           <label>预算
             <input id="budget" type="number" min="1000" step="100" value="6000" required>
@@ -147,7 +147,7 @@
         </form>
       </div>
       <div class="panel metrics">
-        <div class="metric"><span class="pill">API</span><strong>POST /catalog/recommend</strong><span>应用层会自动聚合价格目录与 AI 推荐草案。</span></div>
+        <div class="metric"><span class="pill">API</span><strong>POST /catalog/recommend</strong><span>应用层会自动聚合 build-engine 的价格目录与推荐草案。</span></div>
         <div class="metric"><span class="pill">Admin</span><strong>占位后台</strong><span>商品管理、配件管理、任务状态先以轻量入口保留。</span></div>
         <div class="admin-links">
           <a href="/admin/products">商品管理</a>

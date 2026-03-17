@@ -8,9 +8,6 @@ import (
 )
 
 type buildClientStub struct{}
-
-type aiClientStub struct{}
-
 type jdClientStub struct{}
 type goofishClientStub struct{}
 
@@ -33,11 +30,11 @@ func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildReque
 		},
 	}, nil
 }
-func (aiClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AIAdvisorResponse, error) {
-	return model.AIAdvisorResponse{Advisory: model.Advice{Summary: "说明文本", Reasons: []string{"原因"}}}, nil
+func (buildClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AdviceResponse, error) {
+	return model.AdviceResponse{Advisory: model.Advice{Summary: "说明文本", Reasons: []string{"原因"}}}, nil
 }
-func (aiClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error) {
-	return model.AIAdvisorCatalogResponse{
+func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
+	return model.CatalogAdviceResponse{
 		Selection: model.CatalogSelection{
 			Budget:         6000,
 			UseCase:        "gaming",
@@ -111,7 +108,7 @@ func (goofishClientStub) MarketSummary(context.Context, model.GoofishSearchReque
 }
 
 func TestGenerateBuild(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GenerateBuild(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "new_only"})
 	if err != nil {
 		t.Fatalf("GenerateBuild() error = %v", err)
@@ -125,7 +122,7 @@ func TestGenerateBuild(t *testing.T) {
 }
 
 func TestGenerateCatalogRecommendation(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() error = %v", err)
@@ -139,7 +136,7 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 }
 
 func TestGetAdminPriceCatalog(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 	response, err := service.GetAdminPriceCatalog(context.Background(), model.GenerateBuildRequest{UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("GetAdminPriceCatalog() error = %v", err)
@@ -150,7 +147,7 @@ func TestGetAdminPriceCatalog(t *testing.T) {
 }
 
 func TestListAdminData(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 
 	products, err := service.ListAdminProducts(context.Background(), model.AdminProductFilter{Keyword: "4060", Limit: 10, RealOnly: true, SelfOperatedOnly: true})
 	if err != nil {
@@ -170,7 +167,7 @@ func TestListAdminData(t *testing.T) {
 }
 
 func TestAdminActions(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 
 	collectResponse, err := service.StartAdminCollection(context.Background(), model.AdminCollectRequest{
 		Keyword:  "RTX 4060",
@@ -203,7 +200,7 @@ func TestAdminActions(t *testing.T) {
 }
 
 func TestGoofishAdminActions(t *testing.T) {
-	service := New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
 	items, err := service.ListGoofishStateFiles(context.Background())
 	if err != nil {
 		t.Fatalf("ListGoofishStateFiles() error = %v", err)

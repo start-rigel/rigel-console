@@ -58,6 +58,21 @@ func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildReq
 	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil)
 }
 
+func (c *Client) GenerateAdvice(ctx context.Context, build model.BuildEngineResponse) (model.AdviceResponse, error) {
+	payload := map[string]any{"build": build}
+	return doJSON[model.AdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/generate", payload)
+}
+
+func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
+	payload := map[string]any{
+		"budget":     req.Budget,
+		"use_case":   req.UseCase,
+		"build_mode": req.BuildMode,
+		"catalog":    catalog,
+	}
+	return doJSON[model.CatalogAdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", payload)
+}
+
 func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target string, payload any) (T, error) {
 	var zero T
 	var body *bytes.Reader

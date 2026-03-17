@@ -12,11 +12,8 @@ type BuildEngineClient interface {
 	GetBuild(ctx context.Context, buildID string) (model.BuildEngineResponse, error)
 	SearchParts(ctx context.Context, keyword string, limit int) ([]model.PartSearchResult, error)
 	GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error)
-}
-
-type AIAdvisorClient interface {
-	GenerateAdvice(ctx context.Context, build model.BuildEngineResponse) (model.AIAdvisorResponse, error)
-	GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error)
+	GenerateAdvice(ctx context.Context, build model.BuildEngineResponse) (model.AdviceResponse, error)
+	GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error)
 }
 
 type JDCollectorClient interface {
@@ -37,13 +34,12 @@ type GoofishCollectorClient interface {
 
 type Service struct {
 	buildClient   BuildEngineClient
-	aiClient      AIAdvisorClient
 	jdClient      JDCollectorClient
 	goofishClient GoofishCollectorClient
 }
 
-func New(buildClient BuildEngineClient, aiClient AIAdvisorClient, jdClient JDCollectorClient, goofishClient GoofishCollectorClient) *Service {
-	return &Service{buildClient: buildClient, aiClient: aiClient, jdClient: jdClient, goofishClient: goofishClient}
+func New(buildClient BuildEngineClient, jdClient JDCollectorClient, goofishClient GoofishCollectorClient) *Service {
+	return &Service{buildClient: buildClient, jdClient: jdClient, goofishClient: goofishClient}
 }
 
 func (s *Service) GenerateBuild(ctx context.Context, req model.GenerateBuildRequest) (model.BuildResponse, error) {
@@ -59,7 +55,7 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 	if err != nil {
 		return model.CatalogRecommendationResponse{}, err
 	}
-	advice, err := s.aiClient.GenerateCatalogAdvice(ctx, req, catalog)
+	advice, err := s.buildClient.GenerateCatalogAdvice(ctx, req, catalog)
 	if err != nil {
 		return model.CatalogRecommendationResponse{}, err
 	}
@@ -166,7 +162,7 @@ func (s *Service) composeBuildResponse(ctx context.Context, build model.BuildEng
 		response.Alternatives = append(response.Alternatives, model.Alternative{BuildID: result.ResultID, Label: result.Role, TotalPrice: result.TotalPrice})
 	}
 
-	advice, err := s.aiClient.GenerateAdvice(ctx, build)
+	advice, err := s.buildClient.GenerateAdvice(ctx, build)
 	if err == nil {
 		response.Advice = &advice.Advisory
 	}

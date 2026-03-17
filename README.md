@@ -12,7 +12,7 @@ Phase 6 minimum viable implementation.
 
 ## Implemented
 
-- aggregates build-engine and ai-advisor over HTTP
+- aggregates build-engine over HTTP
 - exposes a price-catalog-first recommendation flow through `POST /catalog/recommend`
 - exposes `POST /build/generate`, `GET /build/{id}`, and `GET /parts/search`
 - serves an embedded frontend page for price-catalog recommendation
@@ -46,7 +46,7 @@ Phase 6 minimum viable implementation.
 ## Notes
 
 - Console does not implement compatibility logic.
-- Console relies on `rigel-build-engine`, `rigel-ai-advisor`, and `rigel-jd-collector` being reachable over HTTP.
+- Console relies on `rigel-build-engine` and `rigel-jd-collector` being reachable over HTTP.
 - The homepage now defaults to `price catalog -> AI recommendation draft`; the older `/build/generate` route is kept for the structured build flow.
 - Admin pages are intentionally lightweight and proxy existing service APIs instead of reading databases directly.
 - Admin product management is now expected to default to real JD data and can narrow further to JD self-operated products.

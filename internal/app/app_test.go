@@ -13,7 +13,6 @@ import (
 )
 
 type buildClientStub struct{}
-type aiClientStub struct{}
 type jdClientStub struct{}
 type goofishClientStub struct{}
 
@@ -36,11 +35,11 @@ func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildReque
 		},
 	}, nil
 }
-func (aiClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AIAdvisorResponse, error) {
-	return model.AIAdvisorResponse{Advisory: model.Advice{Summary: "说明文本"}}, nil
+func (buildClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AdviceResponse, error) {
+	return model.AdviceResponse{Advisory: model.Advice{Summary: "说明文本"}}, nil
 }
-func (aiClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.AIAdvisorCatalogResponse, error) {
-	return model.AIAdvisorCatalogResponse{
+func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
+	return model.CatalogAdviceResponse{
 		Selection: model.CatalogSelection{
 			Budget:         6000,
 			UseCase:        "gaming",
@@ -91,7 +90,7 @@ func (goofishClientStub) MarketSummary(context.Context, model.GoofishSearchReque
 }
 
 func TestIndex(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -101,7 +100,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestGenerateBuild(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"budget":6000,"use_case":"gaming","build_mode":"new_only"}`)
 	req := httptest.NewRequest(http.MethodPost, "/build/generate", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -112,7 +111,7 @@ func TestGenerateBuild(t *testing.T) {
 }
 
 func TestGenerateCatalogRecommendation(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"budget":6000,"use_case":"gaming","build_mode":"mixed"}`)
 	req := httptest.NewRequest(http.MethodPost, "/catalog/recommend", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -123,7 +122,7 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 }
 
 func TestAdminProducts(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/products?keyword=4060&limit=10", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -133,7 +132,7 @@ func TestAdminProducts(t *testing.T) {
 }
 
 func TestAdminCatalogPrices(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/catalog/prices?use_case=gaming&build_mode=mixed", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -143,7 +142,7 @@ func TestAdminCatalogPrices(t *testing.T) {
 }
 
 func TestAdminCollectSearch(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"keyword":"RTX 4060","category":"GPU","limit":2,"persist":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/collect/search", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -154,7 +153,7 @@ func TestAdminCollectSearch(t *testing.T) {
 }
 
 func TestAdminCollectBatch(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"preset":"mvp_base"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/collect/batch", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -165,7 +164,7 @@ func TestAdminCollectBatch(t *testing.T) {
 }
 
 func TestAdminRetryJob(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/jobs/job-1/retry", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -175,7 +174,7 @@ func TestAdminRetryJob(t *testing.T) {
 }
 
 func TestAdminGoofishStateFiles(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/goofish/state-files", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -185,7 +184,7 @@ func TestAdminGoofishStateFiles(t *testing.T) {
 }
 
 func TestAdminGoofishValidate(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"account_state_file":"goofish_state.json"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/state/validate", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -196,7 +195,7 @@ func TestAdminGoofishValidate(t *testing.T) {
 }
 
 func TestAdminGoofishSearch(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"keyword":"DDR5 6000 32G","category":"RAM","limit":10}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/search", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -207,7 +206,7 @@ func TestAdminGoofishSearch(t *testing.T) {
 }
 
 func TestAdminGoofishMarketSummary(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, aiClientStub{}, jdClientStub{}, goofishClientStub{}))
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}, jdClientStub{}, goofishClientStub{}))
 	body := []byte(`{"keyword":"DDR5 6000 32G","category":"RAM","limit":10}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/goofish/market-summary", bytes.NewReader(body))
 	rec := httptest.NewRecorder()

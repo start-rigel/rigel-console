@@ -60,7 +60,7 @@ type CatalogRecommendationItem struct {
 	Reasons         []string `json:"reasons,omitempty"`
 }
 
-// Advice is the AI explanation block shown to users.
+// Advice is the recommendation explanation block shown to users.
 type Advice struct {
 	Summary         string   `json:"summary"`
 	Reasons         []string `json:"reasons"`
@@ -330,8 +330,8 @@ type BuildEngineCatalogSourceItem struct {
 	MaxPrice       float64 `json:"max_price"`
 }
 
-// AIAdvisorResponse mirrors the ai-advisor response contract.
-type AIAdvisorResponse struct {
+// AdviceResponse mirrors the build-engine advice response contract.
+type AdviceResponse struct {
 	BuildRequestID string `json:"build_request_id"`
 	ResultID       string `json:"result_id"`
 	Provider       string `json:"provider"`
@@ -339,8 +339,8 @@ type AIAdvisorResponse struct {
 	Advisory       Advice `json:"advisory"`
 }
 
-// AIAdvisorCatalogResponse mirrors ai-advisor's catalog recommendation response.
-type AIAdvisorCatalogResponse struct {
+// CatalogAdviceResponse mirrors build-engine's catalog recommendation response.
+type CatalogAdviceResponse struct {
 	Provider     string           `json:"provider"`
 	FallbackUsed bool             `json:"fallback_used"`
 	Selection    CatalogSelection `json:"selection"`
