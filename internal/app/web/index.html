@@ -109,8 +109,6 @@
     }
     .warning { color: var(--accent); }
     .alt-list, .advice-list { display: grid; gap: 8px; padding-left: 18px; }
-    .admin-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-    .admin-links a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
     .empty { opacity: 0.65; }
     @media (max-width: 860px) {
       .hero, .result-grid { grid-template-columns: 1fr; }
@@ -148,12 +146,6 @@
       </div>
       <div class="panel metrics">
         <div class="metric"><span class="pill">API</span><strong>POST /catalog/recommend</strong><span>应用层会自动聚合 build-engine 的价格目录与推荐草案。</span></div>
-        <div class="metric"><span class="pill">Admin</span><strong>占位后台</strong><span>商品管理、配件管理、任务状态先以轻量入口保留。</span></div>
-        <div class="admin-links">
-          <a href="/admin/products">商品管理</a>
-          <a href="/admin/parts">配件管理</a>
-          <a href="/admin/jobs">任务状态</a>
-        </div>
       </div>
     </section>
     <section class="results" id="results">

@@ -22,30 +22,6 @@ func New(baseURL string) *Client {
 	return &Client{baseURL: strings.TrimRight(baseURL, "/"), httpClient: &http.Client{Timeout: 15 * time.Second}}
 }
 
-func (c *Client) GenerateBuild(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEngineResponse, error) {
-	return doJSON[model.BuildEngineResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/builds/generate", req)
-}
-
-func (c *Client) GetBuild(ctx context.Context, buildID string) (model.BuildEngineResponse, error) {
-	return doJSON[model.BuildEngineResponse](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/builds/"+buildID, nil)
-}
-
-func (c *Client) SearchParts(ctx context.Context, keyword string, limit int) ([]model.PartSearchResult, error) {
-	query := url.Values{}
-	query.Set("keyword", keyword)
-	if limit > 0 {
-		query.Set("limit", fmt.Sprintf("%d", limit))
-	}
-	response, err := doJSON[struct {
-		Count int                      `json:"count"`
-		Items []model.PartSearchResult `json:"items"`
-	}](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/parts/search?"+query.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return response.Items, nil
-}
-
 func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	query := url.Values{}
 	if req.UseCase != "" {
@@ -56,11 +32,6 @@ func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildReq
 	}
 	query.Set("limit", "500")
 	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil)
-}
-
-func (c *Client) GenerateAdvice(ctx context.Context, build model.BuildEngineResponse) (model.AdviceResponse, error) {
-	payload := map[string]any{"build": build}
-	return doJSON[model.AdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/generate", payload)
 }
 
 func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {

@@ -12,7 +12,7 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.BuildEngineBaseURL == "" || cfg.JDCollectorBaseURL == "" || cfg.GoofishBaseURL == "" {
-		t.Fatal("expected upstream base URLs")
+	if cfg.BuildEngineBaseURL == "" {
+		t.Fatal("expected build-engine base url")
 	}
 }

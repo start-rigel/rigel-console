@@ -11,12 +11,8 @@ type Config struct {
 	ServiceName        string
 	HTTPPort           string
 	LogLevel           string
-	PostgresDSN        string
-	RedisAddr          string
 	FrontendMode       string
 	BuildEngineBaseURL string
-	JDCollectorBaseURL string
-	GoofishBaseURL     string
 	ReadTimeout        time.Duration
 	WriteTimeout       time.Duration
 	IdleTimeout        time.Duration
@@ -41,12 +37,8 @@ func Load() (Config, error) {
 		ServiceName:        stringFromEnv("RIGEL_SERVICE_NAME", "rigel-console"),
 		HTTPPort:           stringFromEnv("RIGEL_HTTP_PORT", stringFromEnv("RIGEL_CONSOLE_PORT", "8080")),
 		LogLevel:           stringFromEnv("RIGEL_LOG_LEVEL", "info"),
-		PostgresDSN:        stringFromEnv("RIGEL_POSTGRES_DSN", ""),
-		RedisAddr:          stringFromEnv("RIGEL_REDIS_ADDR", ""),
 		FrontendMode:       stringFromEnv("RIGEL_CONSOLE_FRONTEND_MODE", "embedded"),
 		BuildEngineBaseURL: stringFromEnv("RIGEL_BUILD_ENGINE_BASE_URL", "http://rigel-build-engine:18082"),
-		JDCollectorBaseURL: stringFromEnv("RIGEL_JD_COLLECTOR_BASE_URL", "http://rigel-jd-collector:18081"),
-		GoofishBaseURL:     stringFromEnv("RIGEL_GOOFISH_COLLECTOR_BASE_URL", "http://rigel-goofish-collector:18085"),
 		ReadTimeout:        readTimeout,
 		WriteTimeout:       writeTimeout,
 		IdleTimeout:        idleTimeout,

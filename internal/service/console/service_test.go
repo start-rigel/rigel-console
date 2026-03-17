@@ -8,18 +8,7 @@ import (
 )
 
 type buildClientStub struct{}
-type jdClientStub struct{}
-type goofishClientStub struct{}
 
-func (buildClientStub) GenerateBuild(context.Context, model.GenerateBuildRequest) (model.BuildEngineResponse, error) {
-	return sampleBuild(), nil
-}
-func (buildClientStub) GetBuild(context.Context, string) (model.BuildEngineResponse, error) {
-	return sampleBuild(), nil
-}
-func (buildClientStub) SearchParts(context.Context, string, int) ([]model.PartSearchResult, error) {
-	return []model.PartSearchResult{{ID: "part-1", Category: "CPU", Brand: "AMD", Model: "Ryzen 5 7500F", DisplayName: "CPU AMD Ryzen 5 7500F"}}, nil
-}
 func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	return model.BuildEnginePriceCatalog{
 		UseCase:   "gaming",
@@ -30,9 +19,7 @@ func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildReque
 		},
 	}, nil
 }
-func (buildClientStub) GenerateAdvice(context.Context, model.BuildEngineResponse) (model.AdviceResponse, error) {
-	return model.AdviceResponse{Advisory: model.Advice{Summary: "说明文本", Reasons: []string{"原因"}}}, nil
-}
+
 func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuildRequest, model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
 	return model.CatalogAdviceResponse{
 		Selection: model.CatalogSelection{
@@ -48,81 +35,9 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 		Advisory: model.Advice{Summary: "目录推荐说明", Reasons: []string{"价格目录已聚合"}},
 	}, nil
 }
-func (jdClientStub) ListProducts(context.Context, model.AdminProductFilter) ([]model.AdminProduct, error) {
-	return []model.AdminProduct{{ID: "product-1", Title: "RTX 4060 官方自营", Price: 1999, Currency: "CNY", Availability: "in_stock"}}, nil
-}
-func (jdClientStub) ListJobs(context.Context, int) ([]model.AdminJob, error) {
-	return []model.AdminJob{{ID: "job-1", JobType: "jd_collect", Status: "succeeded"}}, nil
-}
-func (jdClientStub) TriggerCollection(context.Context, model.AdminCollectRequest) (model.AdminCollectResponse, error) {
-	return model.AdminCollectResponse{JobID: "job-2", Persisted: true, PersistedCount: 2}, nil
-}
-func (jdClientStub) TriggerBatchCollection(context.Context, model.AdminCollectBatchRequest) (model.AdminCollectBatchResponse, error) {
-	return model.AdminCollectBatchResponse{Preset: "mvp_base", TotalJobs: 8, TotalPersisted: 8}, nil
-}
-func (jdClientStub) RetryJob(context.Context, string) (model.AdminCollectResponse, error) {
-	return model.AdminCollectResponse{JobID: "job-3", RetriedFromJobID: "job-1", Persisted: true, PersistedCount: 2}, nil
-}
-func (goofishClientStub) ListStateFiles(context.Context) ([]model.GoofishStateFile, error) {
-	return []model.GoofishStateFile{{Name: "goofish_state.json", Path: "/tmp/goofish_state.json", IsRoot: true}}, nil
-}
-func (goofishClientStub) PromoteStateFile(context.Context, string) (model.GoofishStateFile, error) {
-	return model.GoofishStateFile{Name: "goofish_state.json", Path: "/tmp/goofish_state.json", IsRoot: true}, nil
-}
-func (goofishClientStub) ValidateState(context.Context, model.GoofishValidateRequest) (model.GoofishValidateResponse, error) {
-	return model.GoofishValidateResponse{Valid: true, StateFile: "goofish_state.json", Keyword: "电脑 内存", SampleCount: 1}, nil
-}
-func (goofishClientStub) Search(context.Context, model.GoofishSearchRequest) (model.GoofishSearchResponse, error) {
-	return model.GoofishSearchResponse{
-		Keyword:        "DDR5 6000 32G",
-		Category:       "RAM",
-		StateFile:      "goofish_state.json",
-		RawResultCount: 3,
-		FilteredCount:  1,
-		FilterStats:    map[string]int{"wanted_post": 1},
-		SampleCount:    2,
-		Products: []model.GoofishSearchProduct{
-			{Title: "光威 DDR5 6000 32G", Price: 2000, SourcePlatform: "xianyu"},
-			{Title: "金士顿 DDR5 6000 32G", Price: 2500, SourcePlatform: "xianyu"},
-		},
-	}, nil
-}
-func (goofishClientStub) MarketSummary(context.Context, model.GoofishSearchRequest) (model.GoofishMarketSummaryResponse, error) {
-	avg := 2250.0
-	median := 2250.0
-	return model.GoofishMarketSummaryResponse{
-		Keyword:        "DDR5 6000 32G",
-		Category:       "RAM",
-		StateFile:      "goofish_state.json",
-		RawResultCount: 3,
-		FilteredCount:  1,
-		FilterStats:    map[string]int{"wanted_post": 1},
-		Summary: model.GoofishMarketSummary{
-			Keyword:     "DDR5 6000 32G",
-			Category:    "RAM",
-			SampleCount: 2,
-			AvgPrice:    &avg,
-			MedianPrice: &median,
-		},
-	}, nil
-}
-
-func TestGenerateBuild(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
-	response, err := service.GenerateBuild(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "new_only"})
-	if err != nil {
-		t.Fatalf("GenerateBuild() error = %v", err)
-	}
-	if response.BuildID == "" {
-		t.Fatal("expected build id")
-	}
-	if response.Advice == nil {
-		t.Fatal("expected advice")
-	}
-}
 
 func TestGenerateCatalogRecommendation(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
+	service := New(buildClientStub{})
 	response, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() error = %v", err)
@@ -132,117 +47,5 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 	}
 	if response.Advice == nil || response.Advice.Summary == "" {
 		t.Fatal("expected catalog advice")
-	}
-}
-
-func TestGetAdminPriceCatalog(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
-	response, err := service.GetAdminPriceCatalog(context.Background(), model.GenerateBuildRequest{UseCase: "gaming", BuildMode: "mixed"})
-	if err != nil {
-		t.Fatalf("GetAdminPriceCatalog() error = %v", err)
-	}
-	if len(response.Items) != 2 {
-		t.Fatalf("expected 2 catalog items, got %d", len(response.Items))
-	}
-}
-
-func TestListAdminData(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
-
-	products, err := service.ListAdminProducts(context.Background(), model.AdminProductFilter{Keyword: "4060", Limit: 10, RealOnly: true, SelfOperatedOnly: true})
-	if err != nil {
-		t.Fatalf("ListAdminProducts() error = %v", err)
-	}
-	if len(products) != 1 {
-		t.Fatalf("expected 1 product, got %d", len(products))
-	}
-
-	jobs, err := service.ListAdminJobs(context.Background(), 10)
-	if err != nil {
-		t.Fatalf("ListAdminJobs() error = %v", err)
-	}
-	if len(jobs) != 1 {
-		t.Fatalf("expected 1 job, got %d", len(jobs))
-	}
-}
-
-func TestAdminActions(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
-
-	collectResponse, err := service.StartAdminCollection(context.Background(), model.AdminCollectRequest{
-		Keyword:  "RTX 4060",
-		Category: "GPU",
-		Limit:    2,
-		Persist:  true,
-	})
-	if err != nil {
-		t.Fatalf("StartAdminCollection() error = %v", err)
-	}
-	if collectResponse.JobID == "" {
-		t.Fatal("expected collection job id")
-	}
-
-	retryResponse, err := service.RetryAdminJob(context.Background(), "job-1")
-	if err != nil {
-		t.Fatalf("RetryAdminJob() error = %v", err)
-	}
-	if retryResponse.RetriedFromJobID != "job-1" {
-		t.Fatalf("expected retried_from_job_id job-1, got %q", retryResponse.RetriedFromJobID)
-	}
-
-	batchResponse, err := service.StartAdminBatchCollection(context.Background(), model.AdminCollectBatchRequest{Preset: "mvp_base"})
-	if err != nil {
-		t.Fatalf("StartAdminBatchCollection() error = %v", err)
-	}
-	if batchResponse.TotalJobs != 8 {
-		t.Fatalf("expected 8 batch jobs, got %d", batchResponse.TotalJobs)
-	}
-}
-
-func TestGoofishAdminActions(t *testing.T) {
-	service := New(buildClientStub{}, jdClientStub{}, goofishClientStub{})
-	items, err := service.ListGoofishStateFiles(context.Background())
-	if err != nil {
-		t.Fatalf("ListGoofishStateFiles() error = %v", err)
-	}
-	if len(items) != 1 {
-		t.Fatalf("expected 1 state file, got %d", len(items))
-	}
-	response, err := service.ValidateGoofishState(context.Background(), model.GoofishValidateRequest{AccountStateFile: "goofish_state.json"})
-	if err != nil {
-		t.Fatalf("ValidateGoofishState() error = %v", err)
-	}
-	if !response.Valid {
-		t.Fatal("expected goofish state to be valid")
-	}
-	searchResponse, err := service.SearchGoofish(context.Background(), model.GoofishSearchRequest{Keyword: "DDR5 6000 32G", Category: "RAM"})
-	if err != nil {
-		t.Fatalf("SearchGoofish() error = %v", err)
-	}
-	if searchResponse.FilteredCount != 1 {
-		t.Fatalf("expected filtered_count 1, got %d", searchResponse.FilteredCount)
-	}
-	summaryResponse, err := service.SummarizeGoofish(context.Background(), model.GoofishSearchRequest{Keyword: "DDR5 6000 32G", Category: "RAM"})
-	if err != nil {
-		t.Fatalf("SummarizeGoofish() error = %v", err)
-	}
-	if summaryResponse.Summary.SampleCount != 2 {
-		t.Fatalf("expected summary sample count 2, got %d", summaryResponse.Summary.SampleCount)
-	}
-}
-
-func sampleBuild() model.BuildEngineResponse {
-	return model.BuildEngineResponse{
-		BuildRequestID: "build-1",
-		Budget:         6000,
-		UseCase:        "gaming",
-		BuildMode:      "new_only",
-		Results: []model.BuildEngineResult{{
-			ResultID:   "result-1",
-			Role:       "primary",
-			TotalPrice: 5899,
-			Currency:   "CNY",
-			Items:      []model.BuildEngineResultItem{{Category: "CPU", DisplayName: "Ryzen 5 7500F", UnitPrice: 1199, SourcePlatform: "jd"}},
-		}},
 	}
 }
