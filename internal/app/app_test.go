@@ -51,6 +51,46 @@ func TestIndex(t *testing.T) {
 	}
 }
 
+func TestKeywordsPage(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	req := httptest.NewRequest(http.MethodGet, "/keywords", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestKeywordEditPage(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	req := httptest.NewRequest(http.MethodGet, "/keywords/seed-1/edit", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestKeywordNewPage(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	req := httptest.NewRequest(http.MethodGet, "/keywords/new", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestKeywordImportPage(t *testing.T) {
+	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	req := httptest.NewRequest(http.MethodGet, "/keywords/import", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
 func TestGenerateCatalogRecommendation(t *testing.T) {
 	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
 	body := []byte(`{"budget":6000,"use_case":"gaming","build_mode":"mixed"}`)

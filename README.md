@@ -34,6 +34,14 @@
 - `POST /catalog/recommend`
 - `GET /`
 
+## 当前页面
+
+- `GET /`
+- `GET /keywords`
+- `GET /keywords/new`
+- `GET /keywords/{id}/edit`
+- `GET /keywords/import`
+
 ## 当前目标
 
 当前模块保持尽量薄：

@@ -2,9 +2,17 @@ package model
 
 // GenerateBuildRequest is the console-facing request contract for recommendation creation.
 type GenerateBuildRequest struct {
-	Budget    float64 `json:"budget"`
-	UseCase   string  `json:"use_case"`
-	BuildMode string  `json:"build_mode"`
+	Budget              float64         `json:"budget"`
+	UseCase             string          `json:"use_case"`
+	BuildMode           string          `json:"build_mode"`
+	BrandPreference     BrandPreference `json:"brand_preference"`
+	SpecialRequirements []string        `json:"special_requirements,omitempty"`
+	Notes               string          `json:"notes,omitempty"`
+}
+
+type BrandPreference struct {
+	CPU string `json:"cpu,omitempty"`
+	GPU string `json:"gpu,omitempty"`
 }
 
 // CatalogRecommendationResponse is the user-facing recommendation assembled from the aggregated price catalog.

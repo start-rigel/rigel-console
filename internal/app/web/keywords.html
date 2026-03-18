@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rigel Console · 型号词库</title>
+  <style>
+    :root {
+      --paper: #f7f2e7;
+      --ink: #1d252b;
+      --muted: #63717b;
+      --accent: #b24d2c;
+      --accent-soft: #f1c3a3;
+      --panel: rgba(255,255,255,0.84);
+      --line: rgba(29,37,43,0.12);
+      --shadow: 0 24px 60px rgba(29,37,43,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(178,77,44,0.16), transparent 34%),
+        linear-gradient(180deg, #efe6d5, var(--paper));
+      font-family: Georgia, "Songti SC", serif;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 28px 20px 52px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px;
+    }
+    .brand { display: flex; gap: 14px; align-items: baseline; }
+    .brand h1 { margin: 0; font-size: clamp(28px, 4vw, 52px); letter-spacing: -0.04em; }
+    .brand p { margin: 0; color: var(--muted); }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav a, .button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.72);
+      font: inherit;
+      cursor: pointer;
+    }
+    .nav a.active, .button.primary {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+    .grid { display: grid; grid-template-columns: 320px 1fr; gap: 18px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .panel-inner { padding: 20px; }
+    .section-title { margin: 0 0 14px; font-size: 20px; }
+    .field { display: grid; gap: 8px; margin-bottom: 12px; }
+    .field label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    input, select {
+      width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; background: rgba(255,255,255,0.78); font: inherit;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 0 0 12px;
+    }
+    tbody td { padding: 14px 0; border-top: 1px solid var(--line); vertical-align: top; }
+    .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; background: var(--accent-soft);
+    }
+    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .button.small { padding: 8px 12px; font-size: 13px; }
+    .button.ghost { background: rgba(255,255,255,0.72); }
+    .hint { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .empty { padding: 24px 0; color: var(--muted); }
+    .status { margin-top: 12px; color: var(--muted); font-size: 14px; }
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      table, thead, tbody, tr, th, td { display: block; }
+      thead { display: none; }
+      tbody td { border-top: 0; padding: 6px 0; }
+      tbody tr { border-top: 1px solid var(--line); padding: 14px 0; display: grid; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <h1>型号词库</h1>
+        <p>Excel 导入、手工维护、启停管理都从这里进入。</p>
+      </div>
+      <nav class="nav">
+        <a href="/">推荐首页</a>
+        <a class="active" href="/keywords">词库列表</a>
+        <a href="/keywords/new">新增词条</a>
+        <a href="/keywords/import">Excel 导入</a>
+      </nav>
+    </div>
+
+    <div class="grid">
+      <aside class="panel">
+        <div class="panel-inner">
+          <h2 class="section-title">筛选条件</h2>
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="">全部类别</option>
+              <option value="cpu">cpu</option>
+              <option value="gpu">gpu</option>
+              <option value="motherboard">motherboard</option>
+              <option value="ram">ram</option>
+              <option value="ssd">ssd</option>
+              <option value="psu">psu</option>
+              <option value="case">case</option>
+              <option value="cooler">cooler</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="brand">Brand</label>
+            <input id="brand" type="text" placeholder="例如 AMD / NVIDIA">
+          </div>
+          <div class="field">
+            <label for="keyword">Keyword</label>
+            <input id="keyword" type="text" placeholder="例如 7500F / RTX 4060">
+          </div>
+          <div class="field">
+            <label for="enabled">Enabled</label>
+            <select id="enabled">
+              <option value="">全部</option>
+              <option value="true">启用</option>
+              <option value="false">停用</option>
+            </select>
+          </div>
+          <button class="button primary" id="search-btn" type="button">查询词库</button>
+          <div class="status" id="filter-status">页面会请求 `/api/v1/keyword-seeds`。如果接口未实现，这里会显示说明。</div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <div class="topbar" style="margin-bottom: 18px;">
+            <div>
+              <h2 class="section-title">当前词条</h2>
+              <p class="hint">列表页用于查看、筛选、启停和导出。第一版不做复杂分页和批量编辑。</p>
+            </div>
+            <div class="row-actions">
+              <a class="button ghost small" href="/keywords/import">导入 Excel</a>
+              <a class="button ghost small" href="/api/v1/keyword-seeds/export">导出 Excel</a>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Keyword</th>
+                <th>Canonical</th>
+                <th>Brand / Aliases</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="keyword-table">
+              <tr>
+                <td colspan="7" class="empty">等待加载词库数据。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const tableBody = document.getElementById('keyword-table');
+    const statusEl = document.getElementById('filter-status');
+
+    function encodeQuery(params) {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          query.set(key, value);
+        }
+      });
+      return query.toString();
+    }
+
+    function renderRows(items) {
+      if (!items || items.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty">没有匹配到词条。</td></tr>';
+        return;
+      }
+      tableBody.innerHTML = items.map((item) => {
+        const aliases = (item.aliases || []).join(', ') || '—';
+        const enabledLabel = item.enabled ? '启用' : '停用';
+        const nextAction = item.enabled ? 'disable' : 'enable';
+        const nextLabel = item.enabled ? '停用' : '启用';
+        return `
+          <tr>
+            <td><span class="tag">${item.category || '—'}</span></td>
+            <td>
+              <div>${item.keyword || '—'}</div>
+              <div class="mono">${item.id || ''}</div>
+            </td>
+            <td>${item.canonical_model || '—'}</td>
+            <td>
+              <div>${item.brand || '—'}</div>
+              <div class="hint">${aliases}</div>
+            </td>
+            <td>${item.priority ?? '—'}</td>
+            <td>${enabledLabel}</td>
+            <td>
+              <div class="row-actions">
+                <a class="button ghost small" href="/keywords/${item.id}/edit">编辑</a>
+                <button class="button ghost small" type="button" onclick="toggleSeed('${item.id}', '${nextAction}')">${nextLabel}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadSeeds() {
+      const params = {
+        category: document.getElementById('category').value,
+        brand: document.getElementById('brand').value.trim(),
+        keyword: document.getElementById('keyword').value.trim(),
+        enabled: document.getElementById('enabled').value,
+        page: 1,
+        page_size: 20,
+      };
+      statusEl.textContent = '正在加载词库...';
+      try {
+        const res = await fetch(`/api/v1/keyword-seeds?${encodeQuery(params)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '加载词库失败');
+        renderRows(data.items || []);
+        statusEl.textContent = `已加载 ${data.items?.length || 0} 条词条。`;
+      } catch (error) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty">当前接口未返回可用数据。</td></tr>';
+        statusEl.textContent = error.message;
+      }
+    }
+
+    async function toggleSeed(id, action) {
+      try {
+        const res = await fetch(`/api/v1/keyword-seeds/${id}/${action}`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `${action} failed`);
+        await loadSeeds();
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    }
+
+    document.getElementById('search-btn').addEventListener('click', loadSeeds);
+    window.toggleSeed = toggleSeed;
+    loadSeeds();
+  </script>
+</body>
+</html>

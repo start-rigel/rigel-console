@@ -10,7 +10,7 @@ import (
 	consoleservice "github.com/rigel-labs/rigel-console/internal/service/console"
 )
 
-//go:embed web/index.html
+//go:embed web/*.html
 var webFS embed.FS
 
 type App struct {
@@ -26,6 +26,10 @@ func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", a.handleHealth)
 	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
+	mux.HandleFunc("/keywords/import", a.handleKeywordImport)
+	mux.HandleFunc("/keywords/new", a.handleKeywordForm)
+	mux.HandleFunc("/keywords/", a.handleKeywordRoutes)
+	mux.HandleFunc("/keywords", a.handleKeywords)
 	mux.HandleFunc("/", a.handleIndex)
 	return mux
 }
@@ -57,7 +61,43 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not found")
 		return
 	}
-	data, err := webFS.ReadFile("web/index.html")
+	a.servePage(w, "web/index.html")
+}
+
+func (a *App) handleKeywords(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/keywords" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	a.servePage(w, "web/keywords.html")
+}
+
+func (a *App) handleKeywordForm(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/keywords/new" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	a.servePage(w, "web/keyword_form.html")
+}
+
+func (a *App) handleKeywordImport(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/keywords/import" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	a.servePage(w, "web/keyword_import.html")
+}
+
+func (a *App) handleKeywordRoutes(w http.ResponseWriter, r *http.Request) {
+	if len(r.URL.Path) > len("/keywords/") && r.URL.Path[len(r.URL.Path)-len("/edit"):] == "/edit" {
+		a.servePage(w, "web/keyword_form.html")
+		return
+	}
+	writeError(w, http.StatusNotFound, "not found")
+}
+
+func (a *App) servePage(w http.ResponseWriter, name string) {
+	data, err := webFS.ReadFile(name)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

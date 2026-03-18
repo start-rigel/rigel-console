@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rigel Console · 型号词条</title>
+  <style>
+    :root {
+      --paper: #f7f2e7;
+      --ink: #1d252b;
+      --muted: #63717b;
+      --accent: #b24d2c;
+      --line: rgba(29,37,43,0.12);
+      --panel: rgba(255,255,255,0.86);
+      --shadow: 0 24px 60px rgba(29,37,43,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(178,77,44,0.14), transparent 36%),
+        linear-gradient(180deg, #efe6d5, var(--paper));
+      font-family: Georgia, "Songti SC", serif;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+    .shell { max-width: 920px; margin: 0 auto; padding: 28px 20px 52px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .topbar h1 { margin: 0; font-size: clamp(30px, 4vw, 54px); letter-spacing: -0.04em; }
+    .topbar p { margin: 6px 0 0; color: var(--muted); }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav a {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.72);
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 24px;
+    }
+    form { display: grid; gap: 18px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: grid; gap: 8px; }
+    .field label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; background: rgba(255,255,255,0.78); font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .button {
+      border: 1px solid var(--line); border-radius: 999px; padding: 12px 18px; background: rgba(255,255,255,0.72); font: inherit; cursor: pointer;
+    }
+    .button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .hint { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .status { color: var(--muted); font-size: 14px; }
+    @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1 id="page-title">新增词条</h1>
+        <p id="page-subtitle">维护 keyword、canonical model、别名、优先级和启停状态。</p>
+      </div>
+      <nav class="nav">
+        <a href="/">推荐首页</a>
+        <a href="/keywords">词库列表</a>
+        <a href="/keywords/import">Excel 导入</a>
+      </nav>
+    </div>
+
+    <section class="panel">
+      <form id="seed-form">
+        <div class="two-col">
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category" required>
+              <option value="cpu">cpu</option>
+              <option value="gpu">gpu</option>
+              <option value="motherboard">motherboard</option>
+              <option value="ram">ram</option>
+              <option value="ssd">ssd</option>
+              <option value="psu">psu</option>
+              <option value="case">case</option>
+              <option value="cooler">cooler</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="brand">Brand</label>
+            <input id="brand" type="text" placeholder="AMD / NVIDIA / Intel">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="keyword">Keyword</label>
+          <input id="keyword" type="text" placeholder="例如 Ryzen 5 7500F" required>
+        </div>
+
+        <div class="field">
+          <label for="canonical_model">Canonical Model</label>
+          <input id="canonical_model" type="text" placeholder="标准型号名" required>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="aliases">Aliases</label>
+            <input id="aliases" type="text" placeholder="多个别名用逗号分隔">
+          </div>
+          <div class="field">
+            <label for="priority">Priority</label>
+            <input id="priority" type="number" min="0" step="1" value="100">
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="enabled">Enabled</label>
+            <select id="enabled">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="seed-id">Seed ID</label>
+            <input id="seed-id" type="text" placeholder="编辑页会自动带入" disabled>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="notes">Notes</label>
+          <textarea id="notes" placeholder="补充说明，比如定位、适用场景、搜索注意事项"></textarea>
+        </div>
+
+        <div class="footer">
+          <div class="hint">新增页调用 `POST /api/v1/keyword-seeds`。编辑页先读取 `GET /api/v1/keyword-seeds/{id}`，再提交 `PUT /api/v1/keyword-seeds/{id}`。</div>
+          <div>
+            <button class="button" type="button" onclick="window.location.href='/keywords'">返回列表</button>
+            <button class="button primary" type="submit">保存词条</button>
+          </div>
+        </div>
+        <div class="status" id="form-status">当前表单会直接按文档契约构造请求。如果后端接口未实现，这里会显示返回错误。</div>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const form = document.getElementById('seed-form');
+    const statusEl = document.getElementById('form-status');
+    const pageTitle = document.getElementById('page-title');
+    const pageSubtitle = document.getElementById('page-subtitle');
+    const seedIdInput = document.getElementById('seed-id');
+    const path = window.location.pathname;
+    const editMatch = path.match(/^\/keywords\/([^/]+)\/edit$/);
+    const editId = editMatch ? decodeURIComponent(editMatch[1]) : '';
+
+    function payloadFromForm() {
+      return {
+        category: document.getElementById('category').value,
+        keyword: document.getElementById('keyword').value.trim(),
+        canonical_model: document.getElementById('canonical_model').value.trim(),
+        brand: document.getElementById('brand').value.trim(),
+        aliases: document.getElementById('aliases').value.split(',').map(v => v.trim()).filter(Boolean),
+        priority: Number(document.getElementById('priority').value || 0),
+        enabled: document.getElementById('enabled').value === 'true',
+        notes: document.getElementById('notes').value.trim(),
+      };
+    }
+
+    function fillForm(item) {
+      document.getElementById('category').value = item.category || 'cpu';
+      document.getElementById('brand').value = item.brand || '';
+      document.getElementById('keyword').value = item.keyword || '';
+      document.getElementById('canonical_model').value = item.canonical_model || '';
+      document.getElementById('aliases').value = (item.aliases || []).join(', ');
+      document.getElementById('priority').value = item.priority ?? 100;
+      document.getElementById('enabled').value = String(Boolean(item.enabled));
+      document.getElementById('notes').value = item.notes || '';
+      seedIdInput.value = item.id || editId;
+    }
+
+    async function loadSeed() {
+      if (!editId) return;
+      pageTitle.textContent = '编辑词条';
+      pageSubtitle.textContent = '编辑页会先读取单个词条详情，再按相同契约提交修改。';
+      seedIdInput.value = editId;
+      statusEl.textContent = '正在加载词条详情...';
+      try {
+        const res = await fetch(`/api/v1/keyword-seeds/${editId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '加载词条失败');
+        fillForm(data);
+        statusEl.textContent = '词条详情已加载。';
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = payloadFromForm();
+      const target = editId ? `/api/v1/keyword-seeds/${editId}` : '/api/v1/keyword-seeds';
+      const method = editId ? 'PUT' : 'POST';
+      statusEl.textContent = '正在提交...';
+      try {
+        const res = await fetch(target, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '保存失败');
+        statusEl.textContent = editId ? '词条已更新。' : '词条已创建。';
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    });
+
+    loadSeed();
+  </script>
+</body>
+</html>
