@@ -293,11 +293,11 @@
         <h1 class="title" data-i18n-html="heroTitle">给我装机吧<br>AI Briefing</h1>
         <p class="subtitle" data-i18n="heroSubtitle">givezj8.cn 把用户需求收成结构化 user_request，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 默认支持中英文切换，字段仍然严格对齐文档约定。</p>
         <form id="build-form">
-          <label data-i18n="fieldBudget">预算
+          <label><span data-i18n="fieldBudget">预算</span>
             <input id="budget" type="number" min="1000" step="100" value="6000" required>
           </label>
           <div class="grid-2">
-            <label data-i18n="fieldUsage">用途
+            <label><span data-i18n="fieldUsage">用途</span>
               <select id="use_case">
                 <option value="gaming" data-i18n-option="usage_gaming">gaming</option>
                 <option value="office" data-i18n-option="usage_office">office</option>
@@ -306,7 +306,7 @@
                 <option value="general" data-i18n-option="usage_general">general</option>
               </select>
             </label>
-            <label data-i18n="fieldMode">模式
+            <label><span data-i18n="fieldMode">模式</span>
               <select id="build_mode">
                 <option value="new_only">new_only</option>
                 <option value="mixed">mixed</option>
@@ -315,14 +315,14 @@
             </label>
           </div>
           <div class="grid-2">
-            <label data-i18n="fieldCpuPreference">CPU 偏好
+            <label><span data-i18n="fieldCpuPreference">CPU 偏好</span>
               <select id="brand_cpu">
                 <option value="" data-i18n-option="any">any</option>
                 <option value="amd">amd</option>
                 <option value="intel">intel</option>
               </select>
             </label>
-            <label data-i18n="fieldGpuPreference">GPU 偏好
+            <label><span data-i18n="fieldGpuPreference">GPU 偏好</span>
               <select id="brand_gpu">
                 <option value="" data-i18n-option="any">any</option>
                 <option value="nvidia">nvidia</option>
@@ -331,10 +331,10 @@
               </select>
             </label>
           </div>
-          <label data-i18n="fieldSpecialRequirements">特殊要求
+          <label><span data-i18n="fieldSpecialRequirements">特殊要求</span>
             <input id="special_requirements" type="text" data-i18n-placeholder="specialRequirementsPlaceholder" placeholder="例如 wifi_motherboard, low_noise">
           </label>
-          <label data-i18n="fieldNotes">补充说明
+          <label><span data-i18n="fieldNotes">补充说明</span>
             <textarea id="notes" data-i18n-placeholder="notesPlaceholder" placeholder="例如：1080p 游戏为主，希望噪音尽量低。"></textarea>
           </label>
           <button type="submit" id="submit-button" data-i18n="submitButton">生成推荐</button>
