@@ -6,79 +6,114 @@
   <title>Rigel Console · 型号词条</title>
   <style>
     :root {
-      --paper: #f7f2e7;
-      --ink: #1d252b;
-      --muted: #63717b;
-      --accent: #b24d2c;
-      --line: rgba(29,37,43,0.12);
-      --panel: rgba(255,255,255,0.86);
-      --shadow: 0 24px 60px rgba(29,37,43,0.12);
+      --bg: #e8eef2;
+      --bg-grid: rgba(39, 91, 122, 0.09);
+      --panel: rgba(255,255,255,0.82);
+      --ink: #0f1b24;
+      --muted: #587082;
+      --line: rgba(15, 27, 36, 0.12);
+      --accent: #1293d1;
+      --accent-strong: #086fa1;
+      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(178,77,44,0.14), transparent 36%),
-        linear-gradient(180deg, #efe6d5, var(--paper));
-      font-family: Georgia, "Songti SC", serif;
       min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
+      background:
+        linear-gradient(var(--bg-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+        radial-gradient(circle at top left, rgba(18,147,209,0.16), transparent 26%),
+        linear-gradient(180deg, #eef4f7, var(--bg));
+      background-size: 28px 28px, 28px 28px, auto, auto;
     }
     a { color: inherit; text-decoration: none; }
-    .shell { max-width: 920px; margin: 0 auto; padding: 28px 20px 52px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-    .topbar h1 { margin: 0; font-size: clamp(30px, 4vw, 54px); letter-spacing: -0.04em; }
-    .topbar p { margin: 6px 0 0; color: var(--muted); }
-    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 56px; }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
     .nav a {
-      border: 1px solid var(--line);
+      padding: 10px 14px;
       border-radius: 999px;
-      padding: 11px 16px;
-      background: rgba(255,255,255,0.72);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.64);
+      color: var(--muted);
+      transition: .18s ease;
     }
+    .nav a:hover, .nav a.active {
+      background: rgba(18,147,209,0.12);
+      color: var(--ink);
+      border-color: rgba(18,147,209,0.32);
+    }
+    .topbar { margin-bottom: 24px; }
+    .topbar h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.05em; }
+    .topbar p { margin: 8px 0 0; color: var(--muted); max-width: 620px; line-height: 1.7; }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 28px;
+      border-radius: 26px;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(16px);
       padding: 24px;
     }
     form { display: grid; gap: 18px; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .field { display: grid; gap: 8px; }
-    .field label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-    input, select, textarea {
-      width: 100%; border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; background: rgba(255,255,255,0.78); font: inherit;
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    input, select, textarea, .button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.78);
+      color: var(--ink);
+      font: inherit;
     }
     textarea { min-height: 110px; resize: vertical; }
-    .footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .button {
-      border: 1px solid var(--line); border-radius: 999px; padding: 12px 18px; background: rgba(255,255,255,0.72); font: inherit; cursor: pointer;
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(18,147,209,0.45);
+      box-shadow: 0 0 0 4px rgba(18,147,209,0.10);
     }
-    .button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-    .hint { color: var(--muted); font-size: 14px; line-height: 1.6; }
-    .status { color: var(--muted); font-size: 14px; }
-    @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: flex-start; } }
+    .footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .button { cursor: pointer; }
+    .button.primary {
+      width: auto;
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      border-color: transparent;
+      color: #fff;
+      font-weight: 700;
+    }
+    .button.ghost { width: auto; background: rgba(255,255,255,0.72); }
+    .hint, .status { color: var(--muted); line-height: 1.7; }
+    @media (max-width: 760px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topbar">
-      <div>
-        <h1 id="page-title">新增词条</h1>
-        <p id="page-subtitle">维护 keyword、canonical model、别名、优先级和启停状态。</p>
-      </div>
-      <nav class="nav">
-        <a href="/">推荐首页</a>
-        <a href="/keywords">词库列表</a>
-        <a href="/keywords/import">Excel 导入</a>
-      </nav>
-    </div>
+    <nav class="nav">
+      <a href="/">推荐首页</a>
+      <a href="/keywords">词库列表</a>
+      <a class="active" href="/keywords/new">新增词条</a>
+      <a href="/keywords/import">Excel 导入</a>
+    </nav>
+
+    <header class="topbar">
+      <h1 id="page-title">Seed Editor</h1>
+      <p id="page-subtitle">这里维护 `keyword / canonical_model / aliases / priority / enabled`。表单字段和 API 契约保持一致，不额外扩字段。</p>
+    </header>
 
     <section class="panel">
       <form id="seed-form">
-        <div class="two-col">
+        <div class="grid-2">
           <div class="field">
             <label for="category">Category</label>
             <select id="category" required>
@@ -108,7 +143,7 @@
           <input id="canonical_model" type="text" placeholder="标准型号名" required>
         </div>
 
-        <div class="two-col">
+        <div class="grid-2">
           <div class="field">
             <label for="aliases">Aliases</label>
             <input id="aliases" type="text" placeholder="多个别名用逗号分隔">
@@ -119,7 +154,7 @@
           </div>
         </div>
 
-        <div class="two-col">
+        <div class="grid-2">
           <div class="field">
             <label for="enabled">Enabled</label>
             <select id="enabled">
@@ -135,17 +170,17 @@
 
         <div class="field">
           <label for="notes">Notes</label>
-          <textarea id="notes" placeholder="补充说明，比如定位、适用场景、搜索注意事项"></textarea>
+          <textarea id="notes" placeholder="补充说明，比如适用场景、搜索注意事项、替代写法。"></textarea>
         </div>
 
         <div class="footer">
           <div class="hint">新增页调用 `POST /api/v1/keyword-seeds`。编辑页先读取 `GET /api/v1/keyword-seeds/{id}`，再提交 `PUT /api/v1/keyword-seeds/{id}`。</div>
-          <div>
-            <button class="button" type="button" onclick="window.location.href='/keywords'">返回列表</button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="button ghost" type="button" onclick="window.location.href='/keywords'">返回列表</button>
             <button class="button primary" type="submit">保存词条</button>
           </div>
         </div>
-        <div class="status" id="form-status">当前表单会直接按文档契约构造请求。如果后端接口未实现，这里会显示返回错误。</div>
+        <div class="status" id="form-status">当前表单会按文档契约直接构造请求。如果后端未实现，会在这里显示错误。</div>
       </form>
     </section>
   </div>
@@ -166,7 +201,7 @@
         keyword: document.getElementById('keyword').value.trim(),
         canonical_model: document.getElementById('canonical_model').value.trim(),
         brand: document.getElementById('brand').value.trim(),
-        aliases: document.getElementById('aliases').value.split(',').map(v => v.trim()).filter(Boolean),
+        aliases: document.getElementById('aliases').value.split(',').map((v) => v.trim()).filter(Boolean),
         priority: Number(document.getElementById('priority').value || 0),
         enabled: document.getElementById('enabled').value === 'true',
         notes: document.getElementById('notes').value.trim(),
@@ -187,8 +222,8 @@
 
     async function loadSeed() {
       if (!editId) return;
-      pageTitle.textContent = '编辑词条';
-      pageSubtitle.textContent = '编辑页会先读取单个词条详情，再按相同契约提交修改。';
+      pageTitle.textContent = 'Edit Seed';
+      pageSubtitle.textContent = '编辑模式会先读取单个词条详情，然后按同一份契约提交更新。';
       seedIdInput.value = editId;
       statusEl.textContent = '正在加载词条详情...';
       try {

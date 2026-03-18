@@ -6,81 +6,117 @@
   <title>Rigel Console · Excel 导入</title>
   <style>
     :root {
-      --paper: #f5efe3;
-      --ink: #1d252b;
-      --muted: #63717b;
-      --accent: #b24d2c;
-      --line: rgba(29,37,43,0.12);
-      --panel: rgba(255,255,255,0.86);
-      --shadow: 0 24px 60px rgba(29,37,43,0.12);
+      --bg: #e8eef2;
+      --bg-grid: rgba(39, 91, 122, 0.09);
+      --panel: rgba(255,255,255,0.82);
+      --ink: #0f1b24;
+      --muted: #587082;
+      --line: rgba(15, 27, 36, 0.12);
+      --accent: #1293d1;
+      --accent-strong: #086fa1;
+      --warning: #b56718;
+      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top center, rgba(178,77,44,0.12), transparent 34%),
-        linear-gradient(180deg, #efe6d5, var(--paper));
-      font-family: Georgia, "Songti SC", serif;
       min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
+      background:
+        linear-gradient(var(--bg-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+        radial-gradient(circle at top center, rgba(18,147,209,0.14), transparent 28%),
+        linear-gradient(180deg, #eef4f7, var(--bg));
+      background-size: 28px 28px, 28px 28px, auto, auto;
     }
     a { color: inherit; text-decoration: none; }
-    .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 52px; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
-    .topbar h1 { margin: 0; font-size: clamp(30px, 4vw, 54px); letter-spacing: -0.04em; }
-    .topbar p { margin: 6px 0 0; color: var(--muted); }
-    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
-    .nav a, .button {
+    .shell { max-width: 1040px; margin: 0 auto; padding: 28px 20px 56px; }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .nav a {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.64);
+      color: var(--muted);
+      transition: .18s ease;
+    }
+    .nav a:hover, .nav a.active {
+      background: rgba(18,147,209,0.12);
+      color: var(--ink);
+      border-color: rgba(18,147,209,0.32);
+    }
+    .topbar { margin-bottom: 24px; }
+    .topbar h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.05em; }
+    .topbar p { margin: 8px 0 0; color: var(--muted); max-width: 640px; line-height: 1.7; }
+    .layout { display: grid; grid-template-columns: 1fr 0.95fr; gap: 18px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      padding: 24px;
+    }
+    .section-title { margin: 0 0 12px; font-size: 22px; letter-spacing: -0.03em; }
+    .hint { color: var(--muted); line-height: 1.7; }
+    .dropzone {
+      margin-top: 20px;
+      border: 1.5px dashed rgba(18,147,209,0.32);
+      border-radius: 22px;
+      padding: 30px;
+      text-align: center;
+      background: rgba(18,147,209,0.05);
+    }
+    .dropzone strong { display: block; font-size: 20px; margin-bottom: 8px; }
+    .dropzone input { margin-top: 12px; }
+    .footer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .button {
       border: 1px solid var(--line);
       border-radius: 999px;
       padding: 11px 16px;
       background: rgba(255,255,255,0.72);
       font: inherit;
       cursor: pointer;
+      color: var(--ink);
     }
-    .button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-    .layout { display: grid; grid-template-columns: 1fr 0.9fr; gap: 18px; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      padding: 24px;
+    .button.primary {
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      border-color: transparent;
+      color: #fff;
+      font-weight: 700;
     }
-    .section-title { margin: 0 0 12px; font-size: 22px; }
-    .hint { color: var(--muted); font-size: 14px; line-height: 1.7; }
-    .dropzone {
-      margin-top: 18px;
-      border: 1.5px dashed var(--line);
-      border-radius: 22px;
-      padding: 28px;
-      text-align: center;
-      background: rgba(255,255,255,0.65);
-    }
-    .dropzone input { margin-top: 12px; }
     .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
-    .stat { border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgba(255,255,255,0.72); }
-    .stat strong { display: block; font-size: 28px; }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255,255,255,0.72);
+    }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stat strong { display: block; margin-top: 6px; font-size: 28px; letter-spacing: -0.03em; }
     .errors { margin-top: 16px; display: grid; gap: 10px; }
-    .error-item { border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); }
-    .footer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: flex-start; } }
+    .error-item {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      color: var(--warning);
+    }
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topbar">
-      <div>
-        <h1>Excel 导入</h1>
-        <p>这里对应文档里的 `/keywords/import` 页面，只负责上传模板、查看导入结果和错误明细。</p>
-      </div>
-      <nav class="nav">
-        <a href="/">推荐首页</a>
-        <a href="/keywords">词库列表</a>
-        <a href="/keywords/new">新增词条</a>
-      </nav>
-    </div>
+    <nav class="nav">
+      <a href="/">推荐首页</a>
+      <a href="/keywords">词库列表</a>
+      <a href="/keywords/new">新增词条</a>
+      <a class="active" href="/keywords/import">Excel 导入</a>
+    </nav>
+
+    <header class="topbar">
+      <h1>Import Workbook</h1>
+      <p>这里只做一件事：上传 Excel、触发词库导入、展示导入结果和错误行。模板下载、导入返回字段都和文档定义一致。</p>
+    </header>
 
     <div class="layout">
       <section class="panel">
@@ -88,7 +124,7 @@
         <p class="hint">业务侧批量导入只支持 Excel。当前页面会调用 `POST /api/v1/keyword-seeds/import`，模板下载走 `GET /api/v1/keyword-seeds/template`。</p>
         <div class="dropzone">
           <strong>拖入 Excel 或直接选择文件</strong>
-          <p class="hint">建议文件名：`keyword_seeds.xlsx`</p>
+          <div class="hint">建议文件名：`keyword_seeds.xlsx`</div>
           <input id="file-input" type="file" accept=".xlsx,.xls">
         </div>
         <div class="footer">
@@ -100,10 +136,10 @@
       <aside class="panel">
         <h2 class="section-title">导入结果</h2>
         <div class="stats">
-          <div class="stat"><span class="hint">Job ID</span><strong id="job-id">—</strong></div>
-          <div class="stat"><span class="hint">Imported</span><strong id="imported-count">0</strong></div>
-          <div class="stat"><span class="hint">Failed</span><strong id="failed-count">0</strong></div>
-          <div class="stat"><span class="hint">Status</span><strong id="result-status">Idle</strong></div>
+          <div class="stat"><span>Job ID</span><strong id="job-id">—</strong></div>
+          <div class="stat"><span>Imported</span><strong id="imported-count">0</strong></div>
+          <div class="stat"><span>Failed</span><strong id="failed-count">0</strong></div>
+          <div class="stat"><span>Status</span><strong id="result-status">Idle</strong></div>
         </div>
         <div class="errors" id="error-list">
           <div class="hint">错误明细会显示在这里。</div>

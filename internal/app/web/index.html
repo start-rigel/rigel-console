@@ -6,164 +6,238 @@
   <title>Rigel Console · 推荐首页</title>
   <style>
     :root {
-      --paper: #f6f0e4;
-      --ink: #182126;
-      --accent: #c04f2d;
-      --accent-soft: #f3b596;
-      --panel: rgba(255,255,255,0.78);
-      --line: rgba(24,33,38,0.12);
-      --shadow: 0 20px 50px rgba(24,33,38,0.12);
+      --bg: #e8eef2;
+      --bg-grid: rgba(39, 91, 122, 0.09);
+      --panel: rgba(255, 255, 255, 0.78);
+      --panel-strong: rgba(255, 255, 255, 0.92);
+      --ink: #0f1b24;
+      --muted: #587082;
+      --line: rgba(15, 27, 36, 0.12);
+      --accent: #1293d1;
+      --accent-soft: rgba(18, 147, 209, 0.14);
+      --accent-strong: #086fa1;
+      --success: #0e7c66;
+      --warning: #b56718;
+      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
+      --radius: 24px;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: Georgia, "Songti SC", serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(192,79,45,0.18), transparent 35%),
-        linear-gradient(135deg, #efe4cf, var(--paper));
       min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
+      background:
+        linear-gradient(var(--bg-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+        radial-gradient(circle at top left, rgba(18, 147, 209, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(8, 111, 161, 0.10), transparent 24%),
+        linear-gradient(180deg, #eef4f7, var(--bg));
+      background-size: 28px 28px, 28px 28px, auto, auto, auto;
     }
-    .shell {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 32px 20px 60px;
-    }
-    .hero {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 24px;
-      align-items: start;
-      margin-bottom: 28px;
-    }
-    .title {
-      font-size: clamp(40px, 9vw, 88px);
-      line-height: 0.92;
-      margin: 0;
-      letter-spacing: -0.04em;
-    }
-    .subtitle {
-      max-width: 520px;
-      font-size: 18px;
-      line-height: 1.6;
-      opacity: 0.8;
-    }
+    a { color: inherit; text-decoration: none; }
+    .shell { max-width: 1220px; margin: 0 auto; padding: 28px 20px 56px; }
     .nav {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin: 0 0 18px;
+      margin-bottom: 20px;
     }
     .nav a {
-      color: var(--ink);
-      text-decoration: none;
-      border: 1px solid var(--line);
-      border-radius: 999px;
       padding: 10px 14px;
-      background: rgba(255,255,255,0.72);
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.64);
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      transition: 0.18s ease;
+    }
+    .nav a:hover, .nav a.active {
+      color: var(--ink);
+      border-color: rgba(18, 147, 209, 0.32);
+      background: rgba(18, 147, 209, 0.12);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+      align-items: stretch;
     }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 24px;
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(16px);
     }
-    .form-panel { padding: 22px; }
-    .metrics { display: grid; gap: 14px; padding: 22px; }
-    .metric { border-top: 1px solid var(--line); padding-top: 12px; }
-    .metric:first-child { border-top: 0; padding-top: 0; }
-    .metric strong { display: block; font-size: 28px; }
+    .panel-strong { background: var(--panel-strong); }
+    .form-panel { padding: 24px; }
+    .meta-panel { padding: 24px; display: grid; gap: 16px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .title {
+      margin: 16px 0 10px;
+      font-size: clamp(42px, 8vw, 86px);
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+    }
+    .subtitle {
+      margin: 0 0 22px;
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.7;
+    }
     form { display: grid; gap: 14px; }
-    label { display: grid; gap: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
-    textarea {
-      font: inherit;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.75);
-      color: var(--ink);
-      min-height: 96px;
-      resize: vertical;
-    }
-    .two-col {
+    .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
     }
-    input, select, button {
+    label {
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    input, select, textarea, button {
+      width: 100%;
       font: inherit;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.75);
       color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.78);
+    }
+    textarea { min-height: 104px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(18, 147, 209, 0.45);
+      box-shadow: 0 0 0 4px rgba(18, 147, 209, 0.10);
     }
     button {
-      background: var(--ink);
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
       color: #fff;
+      border-color: transparent;
+      font-weight: 700;
       cursor: pointer;
-      transition: transform .18s ease, background .18s ease;
+      transition: transform .18s ease, box-shadow .18s ease;
+      box-shadow: 0 16px 24px rgba(18, 147, 209, 0.18);
     }
-    button:hover { transform: translateY(-1px); background: #0f1619; }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 28px rgba(18, 147, 209, 0.22);
+    }
+    .metric {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+    .metric:first-child { border-top: 0; padding-top: 0; }
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+    .metric span, .metric small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.6;
+    }
     .results {
+      margin-top: 24px;
       display: grid;
       gap: 18px;
-      margin-top: 28px;
     }
     .result-grid {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 18px;
     }
-    .card { padding: 22px; }
-    .card h2, .card h3 { margin: 0 0 12px; }
+    .card { padding: 24px; }
+    .card h2, .card h3 { margin: 0 0 12px; letter-spacing: -0.03em; }
     .item-list { display: grid; gap: 10px; }
     .item {
       display: grid;
-      grid-template-columns: 92px 1fr auto;
+      grid-template-columns: 100px 1fr auto;
       gap: 14px;
-      padding: 12px 0;
+      align-items: start;
+      padding: 14px 0;
       border-top: 1px solid var(--line);
     }
     .item:first-child { border-top: 0; }
-    .pill {
-      display: inline-block;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 4px 8px;
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 10px;
       border-radius: 999px;
       background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
-    .warning { color: var(--accent); }
-    .alt-list, .advice-list { display: grid; gap: 8px; padding-left: 18px; }
-    .empty { opacity: 0.65; }
-    @media (max-width: 860px) {
-      .hero, .result-grid { grid-template-columns: 1fr; }
+    .muted { color: var(--muted); }
+    .mono {
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+    .advice-list {
+      display: grid;
+      gap: 8px;
+      padding-left: 18px;
+      margin: 0;
+    }
+    .warning { color: var(--warning); }
+    .empty { color: var(--muted); }
+    .price {
+      color: var(--success);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    @media (max-width: 920px) {
+      .hero, .result-grid, .grid-2 { grid-template-columns: 1fr; }
       .item { grid-template-columns: 1fr; }
-      .two-col { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
+    <nav class="nav">
+      <a class="active" href="/">推荐首页</a>
+      <a href="/keywords">词库列表</a>
+      <a href="/keywords/new">新增词条</a>
+      <a href="/keywords/import">Excel 导入</a>
+    </nav>
+
     <section class="hero">
-      <div class="panel form-panel">
-        <nav class="nav">
-          <a href="/">推荐首页</a>
-          <a href="/keywords">词库列表</a>
-          <a href="/keywords/new">新增词条</a>
-          <a href="/keywords/import">Excel 导入</a>
-        </nav>
-        <p class="pill">Rigel Console</p>
-        <h1 class="title">PC Build<br>Navigator</h1>
-        <p class="subtitle">输入预算、用途和偏好，Console 会将 `user_request` 发给 build-engine，由它整理当前价格目录并生成结构化推荐结果。</p>
+      <div class="panel panel-strong form-panel">
+        <span class="eyebrow">Rigel Console</span>
+        <h1 class="title">AI Hardware<br>Briefing</h1>
+        <p class="subtitle">我们把用户需求收成结构化 `user_request`，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 对齐的是文档里已经定下来的字段，不额外扩范围。</p>
         <form id="build-form">
           <label>预算
             <input id="budget" type="number" min="1000" step="100" value="6000" required>
           </label>
-          <div class="two-col">
+          <div class="grid-2">
             <label>用途
               <select id="use_case">
                 <option value="gaming">gaming</option>
@@ -181,7 +255,7 @@
               </select>
             </label>
           </div>
-          <div class="two-col">
+          <div class="grid-2">
             <label>CPU 偏好
               <select id="brand_cpu">
                 <option value="">any</option>
@@ -202,61 +276,83 @@
             <input id="special_requirements" type="text" placeholder="例如 wifi_motherboard, low_noise">
           </label>
           <label>补充说明
-            <textarea id="notes" placeholder="例如 1080p 游戏为主，希望主机尽量安静。"></textarea>
+            <textarea id="notes" placeholder="例如：1080p 游戏为主，希望噪音尽量低。"></textarea>
           </label>
-          <button type="submit">Generate Recommendation</button>
+          <button type="submit">生成推荐</button>
         </form>
       </div>
-      <div class="panel metrics">
-        <div class="metric"><span class="pill">Request</span><strong>user_request</strong><span>首页字段已经和文档里的 `budget / usage / brand_preference / special_requirements / notes` 对齐。</span></div>
-        <div class="metric"><span class="pill">API</span><strong>POST /catalog/recommend</strong><span>Console 仍是薄壳，build-engine 负责价格目录整理和 AI 请求。</span></div>
-      </div>
+
+      <aside class="panel meta-panel">
+        <div class="metric">
+          <span class="eyebrow">Request</span>
+          <strong>user_request</strong>
+          <small>预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。</small>
+        </div>
+        <div class="metric">
+          <span class="eyebrow">Route</span>
+          <strong>POST /catalog/recommend</strong>
+          <small>Console 保持薄壳，推荐生成仍然交给 build-engine。</small>
+        </div>
+        <div class="metric">
+          <span class="eyebrow">Output</span>
+          <strong>summary / parts / total</strong>
+          <small>结果区直接对应当前 API 契约里的结构化推荐输出。</small>
+        </div>
+      </aside>
     </section>
+
     <section class="results" id="results">
-      <div class="panel card empty">结果会显示在这里。</div>
+      <div class="panel card empty">推荐结果会显示在这里。</div>
     </section>
   </div>
+
   <script>
     const form = document.getElementById('build-form');
     const results = document.getElementById('results');
 
     function renderCatalog(response) {
-      const items = (response.selection?.selected_items || []).map(item => `
+      const items = (response.selection?.selected_items || []).map((item) => `
         <div class="item">
-          <strong>${item.category}</strong>
+          <div><span class="chip">${item.category}</span></div>
           <div>
             <div>${item.display_name}</div>
-            <small>${(item.source_platforms || []).join(', ') || 'catalog'}${item.reasons?.length ? ' · ' + item.reasons[0] : ''}</small>
+            <div class="muted mono">${(item.source_platforms || []).join(', ') || 'catalog'}${item.reasons?.length ? ' · ' + item.reasons[0] : ''}</div>
           </div>
-          <div>¥${Math.round(item.selected_price || 0)}</div>
+          <div class="price">¥${Math.round(item.selected_price || 0)}</div>
         </div>
       `).join('');
 
-      const warnings = ([...(response.catalog_warnings || []), ...((response.selection && response.selection.warnings) || [])]).map(w => `<li class="warning">${w}</li>`).join('') || '<li>当前没有额外警告。</li>';
-      const advice = response.advice ? `
-        <div class="panel card">
-          <h3>AI Advice</h3>
-          <p>${response.advice.summary}</p>
-          <ul class="advice-list">${response.advice.reasons.map(item => `<li>${item}</li>`).join('')}</ul>
-          <p><strong>Upgrade:</strong> ${(response.advice.upgrade_advice || []).join(' ')}</p>
-          <p><strong>Alternative:</strong> ${response.advice.alternative_note || '暂无。'}</p>
-        </div>
-      ` : '<div class="panel card"><h3>AI Advice</h3><p class="empty">当前未返回解释。</p></div>';
+      const warnings = ([...(response.catalog_warnings || []), ...((response.selection && response.selection.warnings) || [])])
+        .map((w) => `<li class="warning">${w}</li>`)
+        .join('') || '<li>当前没有额外警告。</li>';
+
+      const reasons = (response.advice?.reasons || []).map((item) => `<li>${item}</li>`).join('') || '<li>当前未返回推荐理由。</li>';
+      const alternatives = (response.advice?.alternative_note || '暂无。');
+      const upgrades = (response.advice?.upgrade_advice || []).join(' ') || '暂无。';
 
       results.innerHTML = `
         <div class="result-grid">
           <div class="panel card">
-            <h2>Catalog Recommendation</h2>
-            <p><strong>Estimated Total:</strong> ¥${Math.round(response.selection?.estimated_total || 0)}</p>
-            <p><strong>Catalog Items:</strong> ${response.catalog_item_count || 0}</p>
-            <div class="item-list">${items}</div>
+            <h2>推荐结果</h2>
+            <p><strong>摘要：</strong>${response.advice?.summary || '当前未返回摘要。'}</p>
+            <p><strong>估算总价：</strong><span class="price">¥${Math.round(response.selection?.estimated_total || 0)}</span></p>
+            <p><strong>目录样本数：</strong>${response.catalog_item_count || 0}</p>
+            <div class="item-list">${items || '<div class="empty">当前没有返回选中的配件项。</div>'}</div>
           </div>
           <div>
+            <div class="panel card">
+              <h3>推荐理由</h3>
+              <ul class="advice-list">${reasons}</ul>
+            </div>
             <div class="panel card">
               <h3>Warnings</h3>
               <ul class="advice-list">${warnings}</ul>
             </div>
-            ${advice}
+            <div class="panel card">
+              <h3>补充说明</h3>
+              <p><strong>Upgrade:</strong> ${upgrades}</p>
+              <p><strong>Alternative:</strong> ${alternatives}</p>
+            </div>
           </div>
         </div>
       `;
@@ -264,7 +360,7 @@
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      results.innerHTML = '<div class="panel card">生成中，请稍等...</div>';
+      results.innerHTML = '<div class="panel card">正在生成推荐，请稍等...</div>';
       const payload = {
         budget: Number(document.getElementById('budget').value),
         use_case: document.getElementById('use_case').value,
@@ -282,8 +378,8 @@
       try {
         const res = await fetch('/catalog/recommend', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'request failed');
