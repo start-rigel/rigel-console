@@ -1,29 +1,46 @@
 # rigel-console
 
-Console application gateway and minimal frontend.
+`rigel-console` 是当前系统的最小前端与 API 入口。
 
-## Language
+## 当前职责
 
-Go
+- 接收用户输入
+- 调用 `rigel-build-engine`
+- 展示推荐结果
 
-## Current Stage
+## 不负责什么
 
-Slimmed down to the minimum UI/API shell for recommendation output.
+- 不直接抓取外部平台数据
+- 不直接做价格清单整理
+- 不直接做 AI 分析
 
-## Implemented
+## 当前输入
 
-- aggregates `rigel-build-engine` over HTTP
-- exposes a price-catalog-first recommendation flow through `POST /catalog/recommend`
-- serves an embedded frontend page for recommendation display
+来自用户界面的参数，例如：
 
-## Routes
+- 预算
+- 用途
+- 品牌偏好
+- 特殊要求
+- 补充说明
+
+## 当前输出
+
+面向用户的推荐结果页面或推荐结果接口响应。
+
+## 当前接口
 
 - `GET /healthz`
 - `POST /catalog/recommend`
 - `GET /`
 
-## Notes
+## 当前目标
 
-- Console does not implement pricing, aggregation, compatibility, or AI logic.
-- Console relies only on `rigel-build-engine` being reachable over HTTP.
-- The homepage defaults to `UI params -> build-engine price catalog -> build-engine AI analysis result`.
+当前模块保持尽量薄：
+
+`用户输入 -> build-engine -> 展示结果`
+
+## 说明
+
+当前 console 不承担抓取、聚合、AI 请求构建等核心逻辑。
+这些逻辑统一由 `rigel-build-engine` 负责。
