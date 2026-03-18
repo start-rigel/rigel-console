@@ -3,176 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>givezj8.cn · 型号词条</title>
+  <title>givezj8.cn · 后台词条编辑</title>
   <style>
-    :root {
-      --bg: #e8eef2;
-      --bg-grid: rgba(39, 91, 122, 0.09);
-      --panel: rgba(255,255,255,0.82);
-      --ink: #0f1b24;
-      --muted: #587082;
-      --line: rgba(15, 27, 36, 0.12);
-      --accent: #1293d1;
-      --accent-strong: #086fa1;
-      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
+    body { margin:0; min-height:100vh; font-family:"Avenir Next","PingFang SC",sans-serif; background:#f7f3ef; color:#231810; }
+    .shell { max-width:960px; margin:0 auto; padding:28px 20px 64px; }
+    .toolbar { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
+    .link, input, select, textarea, button {
+      font:inherit; padding:12px 14px; border-radius:16px; border:1px solid rgba(35,24,16,0.12);
+      background:#fff; color:#231810;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--ink);
-      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
-      background:
-        linear-gradient(var(--bg-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
-        radial-gradient(circle at top left, rgba(18,147,209,0.16), transparent 26%),
-        linear-gradient(180deg, #eef4f7, var(--bg));
-      background-size: 28px 28px, 28px 28px, auto, auto;
-    }
-    a { color: inherit; text-decoration: none; }
-    .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 56px; }
-    .topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .brandline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .domain-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.72);
-      color: var(--accent-strong);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px;
-      background: rgba(255,255,255,0.72);
-      gap: 4px;
-    }
-    .lang-switch button {
-      width: auto;
-      min-width: 64px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      box-shadow: none;
-      cursor: pointer;
-    }
-    .lang-switch button.active {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      color: #fff;
-    }
-    .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-    .nav a {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.64);
-      color: var(--muted);
-      transition: .18s ease;
-    }
-    .nav a:hover, .nav a.active {
-      background: rgba(18,147,209,0.12);
-      color: var(--ink);
-      border-color: rgba(18,147,209,0.32);
-    }
-    .topbar { margin-bottom: 24px; }
-    .topbar h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.05em; }
-    .topbar p { margin: 8px 0 0; color: var(--muted); max-width: 620px; line-height: 1.7; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
-      padding: 24px;
-    }
-    form { display: grid; gap: 18px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .field { display: grid; gap: 8px; }
-    .field label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-    }
-    input, select, textarea, .button {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.78);
-      color: var(--ink);
-      font: inherit;
-    }
-    textarea { min-height: 110px; resize: vertical; }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: rgba(18,147,209,0.45);
-      box-shadow: 0 0 0 4px rgba(18,147,209,0.10);
-    }
-    .footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .button { cursor: pointer; }
-    .button.primary {
-      width: auto;
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      border-color: transparent;
-      color: #fff;
-      font-weight: 700;
-    }
-    .button.ghost { width: auto; background: rgba(255,255,255,0.72); }
-    .hint, .status { color: var(--muted); line-height: 1.7; }
-    @media (max-width: 760px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
+    .link { text-decoration:none; color:#69584b; }
+    button { cursor:pointer; }
+    .primary { background:#9d4e1d; color:#fff; border:0; }
+    .card { background:#fff; border:1px solid rgba(35,24,16,0.08); border-radius:26px; padding:24px; box-shadow:0 18px 40px rgba(35,24,16,0.08); margin-top:18px; }
+    form { display:grid; gap:14px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    label { display:grid; gap:8px; font-size:12px; color:#7a685d; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    textarea { min-height:120px; resize:vertical; }
+    @media (max-width: 860px) { .grid-2 { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topline">
-      <div class="brandline">
-        <span class="domain-badge">givezj8.cn</span>
-        <span class="button ghost" style="width:auto; cursor:default;">keyword seed</span>
+    <div class="toolbar">
+      <div>
+        <div style="color:#7a685d;">givezj8.cn / admin</div>
+        <h1 id="title" style="margin:8px 0 0; font-size:52px; letter-spacing:-.05em;">新增词条</h1>
       </div>
-      <div class="lang-switch" aria-label="Language switch">
-        <button type="button" data-lang-button="zh">中文</button>
-        <button type="button" data-lang-button="en">EN</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="link" href="/admin">后台首页</a>
+        <a class="link" href="/admin/keywords">返回列表</a>
       </div>
     </div>
 
-    <nav class="nav">
-      <a href="/" data-i18n="navHome">推荐首页</a>
-      <a href="/keywords" data-i18n="navKeywords">词库列表</a>
-      <a class="active" href="/keywords/new" data-i18n="navNew">新增词条</a>
-      <a href="/keywords/import" data-i18n="navImport">Excel 导入</a>
-    </nav>
-
-    <header class="topbar">
-      <h1 id="page-title" data-i18n="pageTitleCreate">Seed Editor</h1>
-      <p id="page-subtitle" data-i18n="pageSubtitleCreate">这里维护 keyword、canonical_model、aliases、priority、enabled。表单字段和 API 契约保持一致，不额外扩字段。</p>
-    </header>
-
-    <section class="panel">
+    <section class="card">
       <form id="seed-form">
         <div class="grid-2">
-          <div class="field">
-            <label for="category" data-i18n="fieldCategory">Category</label>
-            <select id="category" required>
+          <label>类别
+            <select id="category">
               <option value="cpu">cpu</option>
               <option value="gpu">gpu</option>
               <option value="motherboard">motherboard</option>
@@ -182,259 +50,85 @@
               <option value="case">case</option>
               <option value="cooler">cooler</option>
             </select>
-          </div>
-          <div class="field">
-            <label for="brand" data-i18n="fieldBrand">Brand</label>
-            <input id="brand" type="text" data-i18n-placeholder="brandPlaceholder" placeholder="AMD / NVIDIA / Intel">
-          </div>
+          </label>
+          <label>品牌
+            <input id="brand" placeholder="AMD / NVIDIA / Intel">
+          </label>
         </div>
-
-        <div class="field">
-          <label for="keyword" data-i18n="fieldKeyword">Keyword</label>
-          <input id="keyword" type="text" data-i18n-placeholder="keywordPlaceholder" placeholder="例如 Ryzen 5 7500F" required>
-        </div>
-
-        <div class="field">
-          <label for="canonical_model" data-i18n="fieldCanonicalModel">Canonical Model</label>
-          <input id="canonical_model" type="text" data-i18n-placeholder="canonicalPlaceholder" placeholder="标准型号名" required>
-        </div>
-
+        <label>关键词
+          <input id="keyword" required>
+        </label>
+        <label>标准型号
+          <input id="canonical_model" required>
+        </label>
         <div class="grid-2">
-          <div class="field">
-            <label for="aliases" data-i18n="fieldAliases">Aliases</label>
-            <input id="aliases" type="text" data-i18n-placeholder="aliasesPlaceholder" placeholder="多个别名用逗号分隔">
-          </div>
-          <div class="field">
-            <label for="priority" data-i18n="fieldPriority">Priority</label>
-            <input id="priority" type="number" min="0" step="1" value="100">
-          </div>
+          <label>别名
+            <input id="aliases" placeholder="逗号分隔">
+          </label>
+          <label>优先级
+            <input id="priority" type="number" value="100">
+          </label>
         </div>
-
         <div class="grid-2">
-          <div class="field">
-            <label for="enabled" data-i18n="fieldEnabled">Enabled</label>
+          <label>启用状态
             <select id="enabled">
-              <option value="true" data-i18n-option="enabled">true</option>
-              <option value="false" data-i18n-option="disabled">false</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
             </select>
-          </div>
-          <div class="field">
-            <label for="seed-id" data-i18n="fieldSeedId">Seed ID</label>
-            <input id="seed-id" type="text" data-i18n-placeholder="seedIdPlaceholder" placeholder="编辑页会自动带入" disabled>
-          </div>
+          </label>
+          <label>词条 ID
+            <input id="seed-id" disabled>
+          </label>
         </div>
-
-        <div class="field">
-          <label for="notes" data-i18n="fieldNotes">Notes</label>
-          <textarea id="notes" data-i18n-placeholder="notesPlaceholder" placeholder="补充说明，比如适用场景、搜索注意事项、替代写法。"></textarea>
-        </div>
-
-        <div class="footer">
-          <div class="hint" id="form-hint" data-i18n="formHintCreate">新增页调用 `POST /api/v1/keyword-seeds`。编辑页先读取 `GET /api/v1/keyword-seeds/{id}`，再提交 `PUT /api/v1/keyword-seeds/{id}`。</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="button ghost" type="button" onclick="window.location.href='/keywords'" data-i18n="backButton">返回列表</button>
-            <button class="button primary" type="submit" id="submit-button" data-i18n="saveButton">保存词条</button>
-          </div>
-        </div>
-        <div class="status" id="form-status" data-i18n="statusIdle">当前表单会按文档契约直接构造请求。如果后端未实现，会在这里显示错误。</div>
+        <label>备注
+          <textarea id="notes"></textarea>
+        </label>
+        <button class="primary" type="submit">保存词条</button>
       </form>
+      <p id="status" style="color:#7a685d;">等待提交</p>
     </section>
   </div>
-
   <script>
-    const i18n = {
-      zh: {
-        pageTitle: 'givezj8.cn · 型号词条',
-        navHome: '推荐首页',
-        navKeywords: '词库列表',
-        navNew: '新增词条',
-        navImport: 'Excel 导入',
-        pageTitleCreate: 'Seed Editor',
-        pageSubtitleCreate: '这里维护 keyword、canonical_model、aliases、priority、enabled。表单字段和 API 契约保持一致，不额外扩字段。',
-        pageTitleEdit: 'Edit Seed',
-        pageSubtitleEdit: '编辑模式会先读取单个词条详情，然后按同一份契约提交更新。',
-        fieldCategory: 'Category',
-        fieldBrand: 'Brand',
-        fieldKeyword: 'Keyword',
-        fieldCanonicalModel: 'Canonical Model',
-        fieldAliases: 'Aliases',
-        fieldPriority: 'Priority',
-        fieldEnabled: 'Enabled',
-        fieldSeedId: 'Seed ID',
-        fieldNotes: 'Notes',
-        brandPlaceholder: 'AMD / NVIDIA / Intel',
-        keywordPlaceholder: '例如 Ryzen 5 7500F',
-        canonicalPlaceholder: '标准型号名',
-        aliasesPlaceholder: '多个别名用逗号分隔',
-        seedIdPlaceholder: '编辑页会自动带入',
-        notesPlaceholder: '补充说明，比如适用场景、搜索注意事项、替代写法。',
-        enabled: '启用',
-        disabled: '停用',
-        formHintCreate: '新增页调用 `POST /api/v1/keyword-seeds`。编辑页先读取 `GET /api/v1/keyword-seeds/{id}`，再提交 `PUT /api/v1/keyword-seeds/{id}`。',
-        backButton: '返回列表',
-        saveButton: '保存词条',
-        statusIdle: '当前表单会按文档契约直接构造请求。如果后端未实现，会在这里显示错误。',
-        statusLoading: '正在加载词条详情...',
-        statusLoaded: '词条详情已加载。',
-        statusSubmitting: '正在提交...',
-        statusUpdated: '词条已更新。',
-        statusCreated: '词条已创建。',
-        loadFailed: '加载词条失败',
-        saveFailed: '保存失败'
-      },
-      en: {
-        pageTitle: 'givezj8.cn · Keyword Seed',
-        navHome: 'Recommend',
-        navKeywords: 'Keyword Seeds',
-        navNew: 'New Seed',
-        navImport: 'Excel Import',
-        pageTitleCreate: 'Seed Editor',
-        pageSubtitleCreate: 'This form manages keyword, canonical_model, aliases, priority, and enabled. It stays aligned with the API contract and does not add extra fields.',
-        pageTitleEdit: 'Edit Seed',
-        pageSubtitleEdit: 'Edit mode loads the seed detail first and then submits updates through the same contract.',
-        fieldCategory: 'Category',
-        fieldBrand: 'Brand',
-        fieldKeyword: 'Keyword',
-        fieldCanonicalModel: 'Canonical Model',
-        fieldAliases: 'Aliases',
-        fieldPriority: 'Priority',
-        fieldEnabled: 'Enabled',
-        fieldSeedId: 'Seed ID',
-        fieldNotes: 'Notes',
-        brandPlaceholder: 'AMD / NVIDIA / Intel',
-        keywordPlaceholder: 'for example Ryzen 5 7500F',
-        canonicalPlaceholder: 'canonical model name',
-        aliasesPlaceholder: 'separate aliases with commas',
-        seedIdPlaceholder: 'auto-filled on edit pages',
-        notesPlaceholder: 'context such as use case, search tips, or alternate spellings.',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
-        formHintCreate: 'Create pages call `POST /api/v1/keyword-seeds`. Edit pages first read `GET /api/v1/keyword-seeds/{id}` and then submit `PUT /api/v1/keyword-seeds/{id}`.',
-        backButton: 'Back to List',
-        saveButton: 'Save Seed',
-        statusIdle: 'This form builds requests directly from the documented contract. If the backend is not implemented yet, the error will appear here.',
-        statusLoading: 'Loading seed detail...',
-        statusLoaded: 'Seed detail loaded.',
-        statusSubmitting: 'Submitting...',
-        statusUpdated: 'Seed updated.',
-        statusCreated: 'Seed created.',
-        loadFailed: 'Failed to load seed',
-        saveFailed: 'Failed to save seed'
-      }
-    };
-
-    const form = document.getElementById('seed-form');
-    const statusEl = document.getElementById('form-status');
-    const pageTitle = document.getElementById('page-title');
-    const pageSubtitle = document.getElementById('page-subtitle');
-    const formHint = document.getElementById('form-hint');
-    const submitButton = document.getElementById('submit-button');
-    const seedIdInput = document.getElementById('seed-id');
-    const path = window.location.pathname;
-    const editMatch = path.match(/^\/keywords\/([^/]+)\/edit$/);
-    const editId = editMatch ? decodeURIComponent(editMatch[1]) : '';
-    let currentLang = localStorage.getItem('rigel_console_lang') || 'zh';
-
-    function t(key) {
-      return i18n[currentLang][key] || key;
+    const match = location.pathname.match(/^\/admin\/keywords\/([^/]+)\/edit$/);
+    const editId = match ? match[1] : '';
+    if (editId) {
+      document.getElementById('title').textContent = '编辑词条';
+      document.getElementById('seed-id').value = editId;
+      fetch(`/admin/api/v1/keyword-seeds/${editId}`).then(async (res) => {
+        if (!res.ok) return;
+        const item = await res.json();
+        ['category', 'brand', 'keyword', 'canonical_model', 'notes'].forEach((id) => {
+          if (item[id] !== undefined) document.getElementById(id).value = item[id];
+        });
+        document.getElementById('aliases').value = (item.aliases || []).join(',');
+        document.getElementById('priority').value = item.priority || 100;
+        document.getElementById('enabled').value = String(item.enabled);
+      });
     }
 
-    function applyLanguage() {
-      document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-      document.title = t('pageTitle');
-      document.querySelectorAll('[data-i18n]').forEach((el) => {
-        el.textContent = t(el.dataset.i18n);
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-        el.placeholder = t(el.dataset.i18nPlaceholder);
-      });
-      document.querySelectorAll('[data-i18n-option]').forEach((el) => {
-        el.textContent = t(el.dataset.i18nOption);
-      });
-      document.querySelectorAll('[data-lang-button]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.langButton === currentLang);
-      });
-      if (editId) {
-        pageTitle.textContent = t('pageTitleEdit');
-        pageSubtitle.textContent = t('pageSubtitleEdit');
-      } else {
-        pageTitle.textContent = t('pageTitleCreate');
-        pageSubtitle.textContent = t('pageSubtitleCreate');
-      }
-      formHint.textContent = t('formHintCreate');
-      submitButton.textContent = t('saveButton');
-    }
-
-    function payloadFromForm() {
-      return {
+    document.getElementById('seed-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = {
         category: document.getElementById('category').value,
+        brand: document.getElementById('brand').value.trim(),
         keyword: document.getElementById('keyword').value.trim(),
         canonical_model: document.getElementById('canonical_model').value.trim(),
-        brand: document.getElementById('brand').value.trim(),
-        aliases: document.getElementById('aliases').value.split(',').map((v) => v.trim()).filter(Boolean),
-        priority: Number(document.getElementById('priority').value || 0),
+        aliases: (document.getElementById('aliases').value || '').split(',').map((item) => item.trim()).filter(Boolean),
+        priority: Number(document.getElementById('priority').value || 100),
         enabled: document.getElementById('enabled').value === 'true',
-        notes: document.getElementById('notes').value.trim(),
+        notes: document.getElementById('notes').value.trim()
       };
-    }
-
-    function fillForm(item) {
-      document.getElementById('category').value = item.category || 'cpu';
-      document.getElementById('brand').value = item.brand || '';
-      document.getElementById('keyword').value = item.keyword || '';
-      document.getElementById('canonical_model').value = item.canonical_model || '';
-      document.getElementById('aliases').value = (item.aliases || []).join(', ');
-      document.getElementById('priority').value = item.priority ?? 100;
-      document.getElementById('enabled').value = String(Boolean(item.enabled));
-      document.getElementById('notes').value = item.notes || '';
-      seedIdInput.value = item.id || editId;
-    }
-
-    async function loadSeed() {
-      if (!editId) return;
-      seedIdInput.value = editId;
-      statusEl.textContent = t('statusLoading');
-      try {
-        const res = await fetch(`/api/v1/keyword-seeds/${editId}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('loadFailed'));
-        fillForm(data);
-        statusEl.textContent = t('statusLoaded');
-      } catch (error) {
-        statusEl.textContent = error.message;
-      }
-    }
-
-    document.querySelectorAll('[data-lang-button]').forEach((button) => {
-      button.addEventListener('click', () => {
-        currentLang = button.dataset.langButton;
-        localStorage.setItem('rigel_console_lang', currentLang);
-        applyLanguage();
+      const res = await fetch(editId ? `/admin/api/v1/keyword-seeds/${editId}` : '/admin/api/v1/keyword-seeds', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-    });
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const payload = payloadFromForm();
-      const target = editId ? `/api/v1/keyword-seeds/${editId}` : '/api/v1/keyword-seeds';
-      const method = editId ? 'PUT' : 'POST';
-      statusEl.textContent = t('statusSubmitting');
-      try {
-        const res = await fetch(target, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || t('saveFailed'));
-        statusEl.textContent = editId ? t('statusUpdated') : t('statusCreated');
-      } catch (error) {
-        statusEl.textContent = error.message;
+      const data = await res.json();
+      document.getElementById('status').textContent = res.ok ? `已保存 ${data.id}` : (data.error || '保存失败');
+      if (res.ok && !editId) {
+        window.location.href = `/admin/keywords/${data.id}/edit`;
       }
     });
-
-    applyLanguage();
-    loadSeed();
   </script>
 </body>
 </html>

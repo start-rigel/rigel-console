@@ -3,344 +3,69 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>givezj8.cn · Excel 导入</title>
+  <title>givezj8.cn · 后台 Excel 导入</title>
   <style>
-    :root {
-      --bg: #e8eef2;
-      --bg-grid: rgba(39, 91, 122, 0.09);
-      --panel: rgba(255,255,255,0.82);
-      --ink: #0f1b24;
-      --muted: #587082;
-      --line: rgba(15, 27, 36, 0.12);
-      --accent: #1293d1;
-      --accent-strong: #086fa1;
-      --warning: #b56718;
-      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
+    body { margin:0; min-height:100vh; font-family:"Avenir Next","PingFang SC",sans-serif; background:#edf2f6; color:#19222b; }
+    .shell { max-width:1100px; margin:0 auto; padding:28px 20px 64px; }
+    .toolbar { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
+    .layout { display:grid; grid-template-columns: 1fr 0.9fr; gap:18px; margin-top:18px; }
+    .card { background:#fff; border:1px solid rgba(25,34,43,0.08); border-radius:24px; padding:24px; box-shadow:0 18px 40px rgba(25,34,43,0.08); }
+    .link, button, input {
+      font:inherit; padding:12px 14px; border-radius:16px; border:1px solid rgba(25,34,43,0.12);
+      background:#fff; color:#22303a; text-decoration:none;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--ink);
-      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
-      background:
-        linear-gradient(var(--bg-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
-        radial-gradient(circle at top center, rgba(18,147,209,0.14), transparent 28%),
-        linear-gradient(180deg, #eef4f7, var(--bg));
-      background-size: 28px 28px, 28px 28px, auto, auto;
-    }
-    a { color: inherit; text-decoration: none; }
-    .shell { max-width: 1040px; margin: 0 auto; padding: 28px 20px 56px; }
-    .topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .brandline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .domain-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.72);
-      color: var(--accent-strong);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px;
-      background: rgba(255,255,255,0.72);
-      gap: 4px;
-    }
-    .lang-switch button {
-      width: auto;
-      min-width: 64px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      box-shadow: none;
-      cursor: pointer;
-    }
-    .lang-switch button.active {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      color: #fff;
-    }
-    .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-    .nav a {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.64);
-      color: var(--muted);
-      transition: .18s ease;
-    }
-    .nav a:hover, .nav a.active {
-      background: rgba(18,147,209,0.12);
-      color: var(--ink);
-      border-color: rgba(18,147,209,0.32);
-    }
-    .topbar { margin-bottom: 24px; }
-    .topbar h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.05em; }
-    .topbar p { margin: 8px 0 0; color: var(--muted); max-width: 640px; line-height: 1.7; }
-    .layout { display: grid; grid-template-columns: 1fr 0.95fr; gap: 18px; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
-      padding: 24px;
-    }
-    .section-title { margin: 0 0 12px; font-size: 22px; letter-spacing: -0.03em; }
-    .hint { color: var(--muted); line-height: 1.7; }
-    .dropzone {
-      margin-top: 20px;
-      border: 1.5px dashed rgba(18,147,209,0.32);
-      border-radius: 22px;
-      padding: 30px;
-      text-align: center;
-      background: rgba(18,147,209,0.05);
-    }
-    .dropzone strong { display: block; font-size: 20px; margin-bottom: 8px; }
-    .dropzone input { margin-top: 12px; }
-    .footer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-    .button {
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 11px 16px;
-      background: rgba(255,255,255,0.72);
-      font: inherit;
-      cursor: pointer;
-      color: var(--ink);
-    }
-    .button.primary {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      border-color: transparent;
-      color: #fff;
-      font-weight: 700;
-    }
-    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
-    .stat {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      background: rgba(255,255,255,0.72);
-    }
-    .stat span { color: var(--muted); font-size: 13px; }
-    .stat strong { display: block; margin-top: 6px; font-size: 28px; letter-spacing: -0.03em; }
-    .errors { margin-top: 16px; display: grid; gap: 10px; }
-    .error-item {
-      border-top: 1px solid var(--line);
-      padding-top: 10px;
-      color: var(--warning);
-    }
-    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    button { cursor:pointer; }
+    .primary { background:#27597a; color:#fff; border:0; }
+    .drop { border:1.5px dashed rgba(39,89,122,0.32); border-radius:22px; padding:28px; background:rgba(39,89,122,0.04); }
+    pre { white-space:pre-wrap; word-break:break-word; color:#647381; }
+    @media (max-width: 920px) { .layout { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topline">
-      <div class="brandline">
-        <span class="domain-badge">givezj8.cn</span>
-        <span class="button" style="width:auto; cursor:default;">excel import</span>
+    <div class="toolbar">
+      <div>
+        <div style="color:#647381;">givezj8.cn / admin</div>
+        <h1 style="margin:8px 0 0; font-size:52px; letter-spacing:-.05em;">Excel 导入</h1>
       </div>
-      <div class="lang-switch" aria-label="Language switch">
-        <button type="button" data-lang-button="zh">中文</button>
-        <button type="button" data-lang-button="en">EN</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="link" href="/admin">后台首页</a>
+        <a class="link" href="/admin/keywords">词库列表</a>
       </div>
     </div>
 
-    <nav class="nav">
-      <a href="/" data-i18n="navHome">推荐首页</a>
-      <a href="/keywords" data-i18n="navKeywords">词库列表</a>
-      <a href="/keywords/new" data-i18n="navNew">新增词条</a>
-      <a class="active" href="/keywords/import" data-i18n="navImport">Excel 导入</a>
-    </nav>
-
-    <header class="topbar">
-      <h1 data-i18n="title">Import Workbook</h1>
-      <p data-i18n="subtitle">这里只做一件事：上传 Excel、触发词库导入、展示导入结果和错误行。模板下载、导入返回字段都和文档定义一致。</p>
-    </header>
-
     <div class="layout">
-      <section class="panel">
-        <h2 class="section-title" data-i18n="operationTitle">导入操作</h2>
-        <p class="hint" data-i18n="operationHint">业务侧批量导入只支持 Excel。当前页面会调用 `POST /api/v1/keyword-seeds/import`，模板下载走 `GET /api/v1/keyword-seeds/template`。</p>
-        <div class="dropzone">
-          <strong data-i18n="dropTitle">拖入 Excel 或直接选择文件</strong>
-          <div class="hint" data-i18n="dropHint">建议文件名：`keyword_seeds.xlsx`</div>
-          <input id="file-input" type="file" accept=".xlsx,.xls">
+      <section class="card">
+        <h2 style="margin:0 0 12px;">上传工作簿</h2>
+        <p style="color:#647381; line-height:1.7;">支持下载模板并上传 `.xlsx` 文件。当前后端会直接解析工作簿第一张表并按共享文档字段校验。</p>
+        <div class="drop">
+          <input id="file-input" type="file" accept=".xlsx">
         </div>
-        <div class="footer">
-          <a class="button" href="/api/v1/keyword-seeds/template" data-i18n="downloadTemplate">下载模板</a>
-          <button class="button primary" id="upload-btn" type="button" data-i18n="startImport">开始导入</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+          <a class="link" href="/admin/api/v1/keyword-seeds/template">下载模板</a>
+          <button class="primary" id="upload-btn" type="button">开始导入</button>
         </div>
       </section>
 
-      <aside class="panel">
-        <h2 class="section-title" data-i18n="resultTitle">导入结果</h2>
-        <div class="stats">
-          <div class="stat"><span data-i18n="jobIdLabel">Job ID</span><strong id="job-id">—</strong></div>
-          <div class="stat"><span data-i18n="importedLabel">Imported</span><strong id="imported-count">0</strong></div>
-          <div class="stat"><span data-i18n="failedLabel">Failed</span><strong id="failed-count">0</strong></div>
-          <div class="stat"><span data-i18n="statusLabel">Status</span><strong id="result-status">Idle</strong></div>
-        </div>
-        <div class="errors" id="error-list">
-          <div class="hint" data-i18n="errorListHint">错误明细会显示在这里。</div>
-        </div>
+      <aside class="card">
+        <h2 style="margin:0 0 12px;">导入结果</h2>
+        <pre id="result">等待上传</pre>
       </aside>
     </div>
   </div>
-
   <script>
-    const i18n = {
-      zh: {
-        pageTitle: 'givezj8.cn · Excel 导入',
-        navHome: '推荐首页',
-        navKeywords: '词库列表',
-        navNew: '新增词条',
-        navImport: 'Excel 导入',
-        title: 'Import Workbook',
-        subtitle: '这里只做一件事：上传 Excel、触发词库导入、展示导入结果和错误行。模板下载、导入返回字段都和文档定义一致。',
-        operationTitle: '导入操作',
-        operationHint: '业务侧批量导入只支持 Excel。当前页面会调用 `POST /api/v1/keyword-seeds/import`，模板下载走 `GET /api/v1/keyword-seeds/template`。',
-        dropTitle: '拖入 Excel 或直接选择文件',
-        dropHint: '建议文件名：`keyword_seeds.xlsx`',
-        downloadTemplate: '下载模板',
-        startImport: '开始导入',
-        resultTitle: '导入结果',
-        jobIdLabel: 'Job ID',
-        importedLabel: 'Imported',
-        failedLabel: 'Failed',
-        statusLabel: 'Status',
-        idle: 'Idle',
-        uploading: '上传中',
-        done: '完成',
-        selectFile: '请选择文件',
-        importFailed: '导入失败',
-        errorListHint: '错误明细会显示在这里。',
-        noErrors: '当前没有错误明细。',
-        rowError: '第 {row} 行'
-      },
-      en: {
-        pageTitle: 'givezj8.cn · Excel Import',
-        navHome: 'Recommend',
-        navKeywords: 'Keyword Seeds',
-        navNew: 'New Seed',
-        navImport: 'Excel Import',
-        title: 'Import Workbook',
-        subtitle: 'This page does one thing: upload an Excel workbook, trigger keyword import, and show import results plus row-level errors. Template download and return fields stay aligned with the document.',
-        operationTitle: 'Import Operation',
-        operationHint: 'Business-side bulk import only supports Excel. This page calls `POST /api/v1/keyword-seeds/import`, and the template is downloaded from `GET /api/v1/keyword-seeds/template`.',
-        dropTitle: 'Drop an Excel file or choose one directly',
-        dropHint: 'Suggested filename: `keyword_seeds.xlsx`',
-        downloadTemplate: 'Download Template',
-        startImport: 'Start Import',
-        resultTitle: 'Import Result',
-        jobIdLabel: 'Job ID',
-        importedLabel: 'Imported',
-        failedLabel: 'Failed',
-        statusLabel: 'Status',
-        idle: 'Idle',
-        uploading: 'Uploading',
-        done: 'Done',
-        selectFile: 'Please choose a file',
-        importFailed: 'Import failed',
-        errorListHint: 'Row-level errors will appear here.',
-        noErrors: 'No error details returned.',
-        rowError: 'Row {row}'
-      }
-    };
-
-    const fileInput = document.getElementById('file-input');
-    const uploadBtn = document.getElementById('upload-btn');
-    const jobIdEl = document.getElementById('job-id');
-    const importedCountEl = document.getElementById('imported-count');
-    const failedCountEl = document.getElementById('failed-count');
-    const resultStatusEl = document.getElementById('result-status');
-    const errorListEl = document.getElementById('error-list');
-    let currentLang = localStorage.getItem('rigel_console_lang') || 'zh';
-
-    function t(key) {
-      return i18n[currentLang][key] || key;
-    }
-
-    function formatText(key, values = {}) {
-      return t(key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
-    }
-
-    function applyLanguage() {
-      document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-      document.title = t('pageTitle');
-      document.querySelectorAll('[data-i18n]').forEach((el) => {
-        el.textContent = t(el.dataset.i18n);
-      });
-      document.querySelectorAll('[data-lang-button]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.langButton === currentLang);
-      });
-      if (!jobIdEl.textContent || jobIdEl.textContent === '—') {
-        resultStatusEl.textContent = t('idle');
-      }
-    }
-
-    function renderErrors(errors) {
-      if (!errors || errors.length === 0) {
-        errorListEl.innerHTML = `<div class="hint">${t('noErrors')}</div>`;
-        return;
-      }
-      errorListEl.innerHTML = errors.map((item) => `
-        <div class="error-item">
-          <strong>${formatText('rowError', { row: item.row })}</strong>
-          <div>${item.message}</div>
-        </div>
-      `).join('');
-    }
-
-    document.querySelectorAll('[data-lang-button]').forEach((button) => {
-      button.addEventListener('click', () => {
-        currentLang = button.dataset.langButton;
-        localStorage.setItem('rigel_console_lang', currentLang);
-        applyLanguage();
-      });
-    });
-
-    uploadBtn.addEventListener('click', async () => {
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) {
-        resultStatusEl.textContent = t('selectFile');
+    document.getElementById('upload-btn').addEventListener('click', async () => {
+      const input = document.getElementById('file-input');
+      if (!input.files.length) {
+        document.getElementById('result').textContent = '请选择文件';
         return;
       }
       const formData = new FormData();
-      formData.append('file', file);
-      resultStatusEl.textContent = t('uploading');
-      try {
-        const res = await fetch('/api/v1/keyword-seeds/import', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('importFailed'));
-        jobIdEl.textContent = data.job_id || '—';
-        importedCountEl.textContent = data.imported_count ?? 0;
-        failedCountEl.textContent = data.failed_count ?? 0;
-        resultStatusEl.textContent = t('done');
-        renderErrors(data.errors || []);
-      } catch (error) {
-        resultStatusEl.textContent = error.message;
-        renderErrors([]);
-      }
+      formData.append('file', input.files[0]);
+      const res = await fetch('/admin/api/v1/keyword-seeds/import', { method: 'POST', body: formData });
+      const data = await res.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
     });
-
-    applyLanguage();
   </script>
 </body>
 </html>

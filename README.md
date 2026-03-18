@@ -1,6 +1,6 @@
 # rigel-console
 
-`rigel-console` 是当前系统的最小前端与 API 入口。
+`rigel-console` 是当前系统的前台用户页、后台管理页和推荐 API 入口。
 
 当前对外站点域名规划：
 
@@ -8,10 +8,13 @@
 
 ## 当前职责
 
+- 提供匿名可直接使用的前台推荐页
+- 提供必须登录后访问的后台管理页
+- 管理匿名会话和后台登录态
 - 接收用户输入
 - 调用 `rigel-build-engine`
 - 展示推荐结果
-- 提供中英文切换页面体验
+- 提供词库管理、导入导出和启停操作
 
 ## 不负责什么
 
@@ -36,8 +39,42 @@
 ## 当前接口
 
 - `GET /healthz`
+- `GET /api/v1/session/anonymous`
 - `POST /catalog/recommend`
 - `GET /`
+- `GET /admin/login`
+- `POST /admin/login`
+- `POST /admin/logout`
+- `GET /admin`
+- `GET /admin/api/v1/keyword-seeds`
+- `POST /admin/api/v1/keyword-seeds`
+- `PUT /admin/api/v1/keyword-seeds/{id}`
+- `POST /admin/api/v1/keyword-seeds/{id}/enable`
+- `POST /admin/api/v1/keyword-seeds/{id}/disable`
+- `POST /admin/api/v1/keyword-seeds/import`
+- `GET /admin/api/v1/keyword-seeds/template`
+- `GET /admin/api/v1/keyword-seeds/export`
+
+## 配置方式
+
+当前服务默认读取：
+
+```text
+configs/config.yaml
+```
+
+启动示例：
+
+```bash
+go run ./cmd/server -config ./configs/config.yaml
+```
+
+默认开发配置：
+
+- 后台用户名：`admin`
+- 后台密码：`admin123456`
+- 匿名会话小时额度：`5`
+- 匿名冷却秒数：`60`
 
 ## 接口示例
 
@@ -58,13 +95,34 @@ curl http://localhost:18084/healthz
 }
 ```
 
-### 2. 推荐请求
+### 2. 匿名会话
 
 请求：
 
 ```bash
+curl http://localhost:18084/api/v1/session/anonymous
+```
+
+响应示例：
+
+```json
+{
+  "anonymous_id": "anon_xxxxx",
+  "cooldown_seconds": 0,
+  "remaining_ai_requests": 5,
+  "challenge_required": false
+}
+```
+
+### 3. 推荐请求
+
+请求：
+
+```bash
+curl http://localhost:18084/api/v1/session/anonymous
 curl -X POST http://localhost:18084/catalog/recommend \
   -H "Content-Type: application/json" \
+  -H "X-Anonymous-Id: anon_xxxxx" \
   -d '{
     "budget": 6000,
     "use_case": "gaming",
@@ -84,6 +142,11 @@ curl -X POST http://localhost:18084/catalog/recommend \
 
 ```json
 {
+  "request_status": {
+    "cache_hit": false,
+    "remaining_ai_requests": 4,
+    "cooldown_seconds": 0
+  },
   "catalog_item_count": 24,
   "catalog_warnings": [],
   "selection": {
@@ -146,38 +209,62 @@ curl -X POST http://localhost:18084/catalog/recommend \
 说明：
 
 - console 当前会先向 build-engine 获取价格目录，再请求推荐草案
-- 当前返回结构以 `catalog_item_count`、`selection`、`advice` 为主，不是旧版 `parts` / `total_price` 平铺结构
+- 当前返回结构以 `request_status`、`catalog_item_count`、`selection`、`advice` 为主
+- 相同参数优先返回缓存结果，不重复消耗匿名 AI 次数
 
-### 3. 页面入口
+### 4. 后台登录
+
+请求：
+
+```bash
+curl -X POST http://localhost:18084/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "admin123456"
+  }'
+```
+
+### 5. 页面入口
 
 ```bash
 curl -I http://localhost:18084/
-curl -I http://localhost:18084/keywords
-curl -I http://localhost:18084/keywords/new
-curl -I http://localhost:18084/keywords/import
+curl -I http://localhost:18084/admin/login
+curl -I http://localhost:18084/admin
+curl -I http://localhost:18084/admin/keywords
+curl -I http://localhost:18084/admin/keywords/new
+curl -I http://localhost:18084/admin/keywords/import
 ```
 
 ## 当前页面
 
 - `GET /`
-- `GET /keywords`
-- `GET /keywords/new`
-- `GET /keywords/{id}/edit`
-- `GET /keywords/import`
+- `GET /admin/login`
+- `GET /admin`
+- `GET /admin/keywords`
+- `GET /admin/keywords/new`
+- `GET /admin/keywords/{id}/edit`
+- `GET /admin/keywords/import`
 
 ## 当前页面要求
 
-- 页面文案支持中文 / English 切换
-- 语言切换优先使用前端本地状态持久化
-- 不要求额外的后端国际化接口
+- 前台推荐页允许匿名直接访问
+- 后台管理页必须先登录
+- 前台和后台页面路由明确分离
 
 ## 当前目标
 
-当前模块保持尽量薄：
+当前模块当前已形成两条入口：
 
-`用户输入 -> build-engine -> 展示结果`
+- 前台：`匿名用户输入 -> build-engine -> 展示结果`
+- 后台：`登录 -> 词库管理 -> 导入导出 / 启停`
 
 ## 说明
 
-当前 console 不承担抓取、聚合、AI 请求构建等核心逻辑。
-这些逻辑统一由 `rigel-build-engine` 负责。
+当前 console 里的词库管理是第一版最小闭环实现：
+
+- 后台登录态使用 Cookie
+- 词库数据当前先在进程内存中维护
+- Excel 模板下载、导出和导入已经可用
+
+真正的抓取、聚合和 AI 分析逻辑仍由其他服务负责。

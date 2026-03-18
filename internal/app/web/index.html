@@ -3,601 +3,255 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>givezj8.cn · AI 装机推荐</title>
+  <title>givezj8.cn · 匿名装机推荐</title>
   <style>
     :root {
-      --bg: #e8eef2;
-      --bg-grid: rgba(39, 91, 122, 0.09);
-      --panel: rgba(255, 255, 255, 0.78);
-      --panel-strong: rgba(255, 255, 255, 0.92);
-      --ink: #0f1b24;
-      --muted: #587082;
-      --line: rgba(15, 27, 36, 0.12);
-      --accent: #1293d1;
-      --accent-soft: rgba(18, 147, 209, 0.14);
-      --accent-strong: #086fa1;
-      --success: #0e7c66;
-      --warning: #b56718;
-      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
+      --bg: #eef3f0;
+      --card: rgba(255, 255, 255, 0.88);
+      --ink: #102127;
+      --muted: #5c7076;
+      --line: rgba(16, 33, 39, 0.12);
+      --accent: #0f8f6c;
+      --accent-dark: #0a6c52;
+      --warn: #b96816;
+      --shadow: 0 24px 48px rgba(16, 33, 39, 0.12);
       --radius: 24px;
     }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       min-height: 100vh;
+      font-family: "Avenir Next", "PingFang SC", sans-serif;
       color: var(--ink);
-      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
       background:
-        linear-gradient(var(--bg-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
-        radial-gradient(circle at top left, rgba(18, 147, 209, 0.18), transparent 28%),
-        radial-gradient(circle at top right, rgba(8, 111, 161, 0.10), transparent 24%),
-        linear-gradient(180deg, #eef4f7, var(--bg));
-      background-size: 28px 28px, 28px 28px, auto, auto, auto;
+        radial-gradient(circle at top left, rgba(15, 143, 108, 0.18), transparent 24%),
+        linear-gradient(180deg, #f8fbfa, var(--bg));
     }
     a { color: inherit; text-decoration: none; }
-    .shell { max-width: 1220px; margin: 0 auto; padding: 28px 20px 56px; }
-    .topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+    .shell { max-width: 1200px; margin: 0 auto; padding: 28px 20px 64px; }
+    .topbar, .hero, .results { display: grid; gap: 20px; }
+    .topbar { grid-template-columns: 1fr auto; align-items: center; }
+    .tag, .status-pill, .action-link {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+      border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.74);
     }
-    .brandline {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+    .action-link { color: var(--muted); }
+    .hero { grid-template-columns: 1.1fr 0.9fr; margin-top: 20px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 24px;
     }
-    .domain-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.72);
-      color: var(--accent-strong);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px;
-      background: rgba(255,255,255,0.72);
-      gap: 4px;
-    }
-    .lang-switch button {
-      width: auto;
-      min-width: 64px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      box-shadow: none;
-    }
-    .lang-switch button.active {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      color: #fff;
-    }
-    .nav {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .nav a {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.64);
-      color: var(--muted);
-      backdrop-filter: blur(10px);
-      transition: 0.18s ease;
-    }
-    .nav a:hover, .nav a.active {
-      color: var(--ink);
-      border-color: rgba(18, 147, 209, 0.32);
-      background: rgba(18, 147, 209, 0.12);
-    }
-    .hero {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 20px;
-      align-items: stretch;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
-    }
-    .panel-strong { background: var(--panel-strong); }
-    .form-panel { padding: 24px; }
-    .meta-panel { padding: 24px; display: grid; gap: 16px; }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-    .title {
-      margin: 16px 0 10px;
-      font-size: clamp(42px, 8vw, 86px);
-      line-height: 0.9;
-      letter-spacing: -0.05em;
-      font-weight: 800;
-    }
-    .subtitle {
-      margin: 0 0 22px;
-      max-width: 620px;
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.7;
-    }
-    form { display: grid; gap: 14px; }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    label {
-      display: grid;
-      gap: 8px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      font-weight: 700;
-    }
+    h1 { margin: 0; font-size: clamp(42px, 7vw, 78px); line-height: .92; letter-spacing: -.05em; }
+    p { color: var(--muted); line-height: 1.7; }
+    form { display: grid; gap: 14px; margin-top: 22px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    label { display: grid; gap: 8px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
     input, select, textarea, button {
-      width: 100%;
-      font: inherit;
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.78);
+      width: 100%; font: inherit; color: var(--ink); padding: 14px 16px;
+      border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,0.92);
     }
-    textarea { min-height: 104px; resize: vertical; }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: rgba(18, 147, 209, 0.45);
-      box-shadow: 0 0 0 4px rgba(18, 147, 209, 0.10);
-    }
+    textarea { min-height: 110px; resize: vertical; }
     button {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      color: #fff;
-      border-color: transparent;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform .18s ease, box-shadow .18s ease;
-      box-shadow: 0 16px 24px rgba(18, 147, 209, 0.18);
+      border: 0; color: #fff; font-weight: 700; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
     }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 18px 28px rgba(18, 147, 209, 0.22);
+    .result-list { display: grid; gap: 12px; margin-top: 14px; }
+    .result-item {
+      display: grid; grid-template-columns: 92px 1fr auto; gap: 14px; align-items: start;
+      padding-top: 14px; border-top: 1px solid var(--line);
     }
-    .metric {
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-    }
-    .metric:first-child { border-top: 0; padding-top: 0; }
-    .metric strong {
-      display: block;
-      margin-top: 8px;
-      font-size: 26px;
-      letter-spacing: -0.03em;
-    }
-    .metric span, .metric small {
-      display: block;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-    .results {
-      margin-top: 24px;
-      display: grid;
-      gap: 18px;
-    }
-    .result-grid {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 18px;
-    }
-    .card { padding: 24px; }
-    .card h2, .card h3 { margin: 0 0 12px; letter-spacing: -0.03em; }
-    .item-list { display: grid; gap: 10px; }
-    .item {
-      display: grid;
-      grid-template-columns: 100px 1fr auto;
-      gap: 14px;
-      align-items: start;
-      padding: 14px 0;
-      border-top: 1px solid var(--line);
-    }
-    .item:first-child { border-top: 0; }
+    .result-item:first-child { border-top: 0; padding-top: 0; }
     .chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      display: inline-flex; justify-content: center; align-items: center; padding: 6px 10px;
+      border-radius: 999px; background: rgba(15, 143, 108, 0.12); color: var(--accent-dark);
+      font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     }
+    .metric strong { display: block; font-size: 34px; letter-spacing: -.04em; margin-top: 8px; }
     .muted { color: var(--muted); }
-    .mono {
-      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-      font-size: 13px;
+    .warning { color: var(--warn); }
+    .summary { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+    pre {
+      margin: 0; white-space: pre-wrap; word-break: break-word; font-family: "SFMono-Regular", Menlo, monospace;
+      font-size: 12px; color: var(--muted);
     }
-    .advice-list {
-      display: grid;
-      gap: 8px;
-      padding-left: 18px;
-      margin: 0;
-    }
-    .warning { color: var(--warning); }
-    .empty { color: var(--muted); }
-    .price {
-      color: var(--success);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    @media (max-width: 920px) {
-      .hero, .result-grid, .grid-2 { grid-template-columns: 1fr; }
-      .item { grid-template-columns: 1fr; }
+    @media (max-width: 900px) {
+      .topbar, .hero { grid-template-columns: 1fr; }
+      .grid-2, .result-item { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topline">
-      <div class="brandline">
-        <span class="domain-badge">givezj8.cn</span>
-        <span class="eyebrow" data-i18n="eyebrow">AI Hardware Recommendation</span>
+    <div class="topbar">
+      <div>
+        <span class="tag">givezj8.cn</span>
       </div>
-      <div class="lang-switch" aria-label="Language switch">
-        <button type="button" data-lang-button="zh">中文</button>
-        <button type="button" data-lang-button="en">EN</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span class="status-pill" id="anonymous-status">匿名会话初始化中</span>
+        <a class="action-link" href="/admin/login">后台管理</a>
       </div>
     </div>
 
-    <nav class="nav">
-      <a class="active" href="/" data-i18n="navHome">推荐首页</a>
-      <a href="/keywords" data-i18n="navKeywords">词库列表</a>
-      <a href="/keywords/new" data-i18n="navNew">新增词条</a>
-      <a href="/keywords/import" data-i18n="navImport">Excel 导入</a>
-    </nav>
+    <div class="hero">
+      <section class="card">
+        <span class="tag">匿名直接使用</span>
+        <h1>给不懂配置的人，直接出一版能买的草案。</h1>
+        <p>前台不需要登录。系统会先命中价格目录和推荐缓存，只有需要新结果时才会触发一次新的 AI 生成。</p>
 
-    <section class="hero">
-      <div class="panel panel-strong form-panel">
-        <h1 class="title" data-i18n-html="heroTitle">给我装机吧<br>AI Briefing</h1>
-        <p class="subtitle" data-i18n="heroSubtitle">givezj8.cn 把用户需求收成结构化 user_request，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 默认支持中英文切换，字段仍然严格对齐文档约定。</p>
-        <form id="build-form">
-          <label><span data-i18n="fieldBudget">预算</span>
-            <input id="budget" type="number" min="1000" step="100" value="6000" required>
-          </label>
+        <form id="recommend-form">
           <div class="grid-2">
-            <label><span data-i18n="fieldUsage">用途</span>
+            <label>预算
+              <input id="budget" type="number" min="1000" step="100" value="6000" required>
+            </label>
+            <label>用途
               <select id="use_case">
-                <option value="gaming" data-i18n-option="usage_gaming">gaming</option>
-                <option value="office" data-i18n-option="usage_office">office</option>
-                <option value="design" data-i18n-option="usage_design">design</option>
-                <option value="streaming" data-i18n-option="usage_streaming">streaming</option>
-                <option value="general" data-i18n-option="usage_general">general</option>
+                <option value="gaming">gaming</option>
+                <option value="productivity">productivity</option>
+                <option value="balanced">balanced</option>
               </select>
             </label>
-            <label><span data-i18n="fieldMode">模式</span>
+          </div>
+          <div class="grid-2">
+            <label>装机模式
               <select id="build_mode">
-                <option value="new_only">new_only</option>
                 <option value="mixed">mixed</option>
+                <option value="new_only">new_only</option>
                 <option value="used_only">used_only</option>
               </select>
             </label>
-          </div>
-          <div class="grid-2">
-            <label><span data-i18n="fieldCpuPreference">CPU 偏好</span>
-              <select id="brand_cpu">
-                <option value="" data-i18n-option="any">any</option>
-                <option value="amd">amd</option>
-                <option value="intel">intel</option>
-              </select>
-            </label>
-            <label><span data-i18n="fieldGpuPreference">GPU 偏好</span>
-              <select id="brand_gpu">
-                <option value="" data-i18n-option="any">any</option>
-                <option value="nvidia">nvidia</option>
-                <option value="amd">amd</option>
-                <option value="intel">intel</option>
-              </select>
+            <label>CPU / GPU 偏好
+              <input id="brand_preferences" placeholder="如 amd,nvidia">
             </label>
           </div>
-          <label><span data-i18n="fieldSpecialRequirements">特殊要求</span>
-            <input id="special_requirements" type="text" data-i18n-placeholder="specialRequirementsPlaceholder" placeholder="例如 wifi_motherboard, low_noise">
+          <label>特殊要求
+            <input id="special_requirements" placeholder="如 wifi_motherboard,low_noise">
           </label>
-          <label><span data-i18n="fieldNotes">补充说明</span>
-            <textarea id="notes" data-i18n-placeholder="notesPlaceholder" placeholder="例如：1080p 游戏为主，希望噪音尽量低。"></textarea>
+          <label>补充说明
+            <textarea id="notes" placeholder="例如：1080p 游戏为主，希望价格稳一点。"></textarea>
           </label>
-          <button type="submit" id="submit-button" data-i18n="submitButton">生成推荐</button>
+          <button type="submit">生成推荐</button>
         </form>
-      </div>
+      </section>
 
-      <aside class="panel meta-panel">
+      <aside class="card">
         <div class="metric">
-          <span class="eyebrow" data-i18n="metricRequestTag">Request</span>
-          <strong>user_request</strong>
-          <small data-i18n="metricRequestBody">预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。</small>
+          <span class="muted">剩余匿名 AI 次数</span>
+          <strong id="remaining">-</strong>
         </div>
-        <div class="metric">
-          <span class="eyebrow" data-i18n="metricRouteTag">Route</span>
-          <strong>POST /catalog/recommend</strong>
-          <small data-i18n="metricRouteBody">Console 保持薄壳，推荐生成仍然交给 build-engine。</small>
+        <div class="metric" style="margin-top:18px;">
+          <span class="muted">冷却状态</span>
+          <strong id="cooldown">0 秒</strong>
         </div>
-        <div class="metric">
-          <span class="eyebrow" data-i18n="metricOutputTag">Output</span>
-          <strong>summary / parts / total</strong>
-          <small data-i18n="metricOutputBody">结果区直接对应当前 API 契约里的结构化推荐输出。</small>
+        <div class="metric" style="margin-top:18px;">
+          <span class="muted">最近状态</span>
+          <strong id="request-status">等待请求</strong>
+        </div>
+        <div class="summary">
+          <p id="summary-text">首页会先静默获取匿名会话，再提交推荐请求。相同参数优先命中缓存，不重复消耗 AI 调用。</p>
         </div>
       </aside>
-    </section>
+    </div>
 
-    <section class="results" id="results">
-      <div class="panel card empty" id="results-empty" data-i18n="resultsEmpty">推荐结果会显示在这里。</div>
-    </section>
+    <div class="results">
+      <section class="card">
+        <h2 style="margin:0;">推荐结果</h2>
+        <p id="result-meta">还没有生成结果。</p>
+        <div id="selected-items" class="result-list"></div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0;">建议摘要</h2>
+        <p id="advice-summary">等待推荐结果。</p>
+        <div class="summary">
+          <pre id="advice-detail">{}</pre>
+        </div>
+      </section>
+    </div>
   </div>
 
   <script>
-    const i18n = {
-      zh: {
-        pageTitle: 'givezj8.cn · AI 装机推荐',
-        eyebrow: 'AI Hardware Recommendation',
-        navHome: '推荐首页',
-        navKeywords: '词库列表',
-        navNew: '新增词条',
-        navImport: 'Excel 导入',
-        heroTitle: '给我装机吧<br>AI Briefing',
-        heroSubtitle: 'givezj8.cn 把用户需求收成结构化 user_request，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 默认支持中英文切换，字段仍然严格对齐文档约定。',
-        fieldBudget: '预算',
-        fieldUsage: '用途',
-        fieldMode: '模式',
-        fieldCpuPreference: 'CPU 偏好',
-        fieldGpuPreference: 'GPU 偏好',
-        fieldSpecialRequirements: '特殊要求',
-        fieldNotes: '补充说明',
-        submitButton: '生成推荐',
-        metricRequestTag: 'Request',
-        metricRequestBody: '预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。',
-        metricRouteTag: 'Route',
-        metricRouteBody: 'Console 保持薄壳，推荐生成仍然交给 build-engine。',
-        metricOutputTag: 'Output',
-        metricOutputBody: '结果区直接对应当前 API 契约里的结构化推荐输出。',
-        resultsEmpty: '推荐结果会显示在这里。',
-        usage_gaming: '游戏',
-        usage_office: '办公',
-        usage_design: '设计',
-        usage_streaming: '直播',
-        usage_general: '通用',
-        any: '不限',
-        specialRequirementsPlaceholder: '例如 wifi_motherboard, low_noise',
-        notesPlaceholder: '例如：1080p 游戏为主，希望噪音尽量低。',
-        loading: '正在生成推荐，请稍等...',
-        summaryTitle: '推荐结果',
-        summaryLabel: '摘要：',
-        totalLabel: '估算总价：',
-        itemCountLabel: '目录样本数：',
-        selectedItemsEmpty: '当前没有返回选中的配件项。',
-        reasonsTitle: '推荐理由',
-        warningsTitle: '风险提示',
-        notesTitle: '补充说明',
-        upgradeLabel: '升级建议：',
-        alternativeLabel: '备选说明：',
-        noWarnings: '当前没有额外警告。',
-        noReasons: '当前未返回推荐理由。',
-        noAlternative: '暂无。',
-        noUpgrade: '暂无。',
-        noSummary: '当前未返回摘要。',
-        requestFailed: '请求失败',
-        platformFallback: 'catalog'
-      },
-      en: {
-        pageTitle: 'givezj8.cn · AI PC Recommendation',
-        eyebrow: 'AI Hardware Recommendation',
-        navHome: 'Recommend',
-        navKeywords: 'Keyword Seeds',
-        navNew: 'New Seed',
-        navImport: 'Excel Import',
-        heroTitle: 'Give ZJ8<br>AI Briefing',
-        heroSubtitle: 'givezj8.cn turns user intent into a structured user_request, then lets build-engine combine it with the current model-level price catalog and return a readable recommendation. This UI now supports both Chinese and English without changing the contract.',
-        fieldBudget: 'Budget',
-        fieldUsage: 'Usage',
-        fieldMode: 'Mode',
-        fieldCpuPreference: 'CPU Preference',
-        fieldGpuPreference: 'GPU Preference',
-        fieldSpecialRequirements: 'Special Requirements',
-        fieldNotes: 'Notes',
-        submitButton: 'Generate Recommendation',
-        metricRequestTag: 'Request',
-        metricRequestBody: 'Budget, usage, brand preference, special requirements, and notes stay aligned with the documented request schema.',
-        metricRouteTag: 'Route',
-        metricRouteBody: 'Console remains a thin shell. Recommendation generation still belongs to build-engine.',
-        metricOutputTag: 'Output',
-        metricOutputBody: 'The result panel maps directly to the structured recommendation fields defined in the current API contract.',
-        resultsEmpty: 'Recommendation output will appear here.',
-        usage_gaming: 'Gaming',
-        usage_office: 'Office',
-        usage_design: 'Design',
-        usage_streaming: 'Streaming',
-        usage_general: 'General',
-        any: 'Any',
-        specialRequirementsPlaceholder: 'for example wifi_motherboard, low_noise',
-        notesPlaceholder: 'for example: focus on 1080p gaming, prefer a quieter build.',
-        loading: 'Generating recommendation...',
-        summaryTitle: 'Recommendation',
-        summaryLabel: 'Summary:',
-        totalLabel: 'Estimated Total:',
-        itemCountLabel: 'Catalog Items:',
-        selectedItemsEmpty: 'No selected part items returned.',
-        reasonsTitle: 'Reasons',
-        warningsTitle: 'Warnings',
-        notesTitle: 'Additional Notes',
-        upgradeLabel: 'Upgrade:',
-        alternativeLabel: 'Alternative:',
-        noWarnings: 'No extra warnings returned.',
-        noReasons: 'No recommendation reasons returned.',
-        noAlternative: 'None.',
-        noUpgrade: 'None.',
-        noSummary: 'No summary returned.',
-        requestFailed: 'request failed',
-        platformFallback: 'catalog'
-      }
-    };
+    let anonymousId = '';
 
-    const form = document.getElementById('build-form');
-    const results = document.getElementById('results');
-    let currentLang = localStorage.getItem('rigel_console_lang') || 'zh';
-    let lastResponse = null;
-
-    function t(key) {
-      return i18n[currentLang][key] || key;
+    async function ensureSession() {
+      const res = await fetch('/api/v1/session/anonymous');
+      const data = await res.json();
+      anonymousId = data.anonymous_id || '';
+      document.getElementById('anonymous-status').textContent = anonymousId ? `匿名会话 ${anonymousId}` : '匿名会话获取失败';
+      document.getElementById('remaining').textContent = String(data.remaining_ai_requests ?? '-');
+      document.getElementById('cooldown').textContent = `${data.cooldown_seconds ?? 0} 秒`;
     }
 
-    function applyLanguage() {
-      document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-      document.title = t('pageTitle');
-      document.querySelectorAll('[data-i18n]').forEach((el) => {
-        el.textContent = t(el.dataset.i18n);
-      });
-      document.querySelectorAll('[data-i18n-html]').forEach((el) => {
-        el.innerHTML = t(el.dataset.i18nHtml);
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-        el.placeholder = t(el.dataset.i18nPlaceholder);
-      });
-      document.querySelectorAll('[data-i18n-option]').forEach((el) => {
-        el.textContent = t(el.dataset.i18nOption);
-      });
-      document.querySelectorAll('[data-lang-button]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.langButton === currentLang);
-      });
-      if (lastResponse) {
-        renderCatalog(lastResponse);
-      } else {
-        const empty = document.getElementById('results-empty');
-        if (empty) empty.textContent = t('resultsEmpty');
+    function renderItems(items) {
+      const container = document.getElementById('selected-items');
+      container.innerHTML = '';
+      if (!Array.isArray(items) || items.length === 0) {
+        container.innerHTML = '<p class="muted">当前没有选中任何配件。</p>';
+        return;
       }
-    }
-
-    function renderCatalog(response) {
-      lastResponse = response;
-      const items = (response.selection?.selected_items || []).map((item) => {
-        const reasons = item.reasons?.length ? ' · ' + item.reasons[0] : '';
-        return `
-          <div class="item">
-            <div><span class="chip">${item.category}</span></div>
-            <div>
-              <div>${item.display_name}</div>
-              <div class="muted mono">${(item.source_platforms || []).join(', ') || t('platformFallback')}${reasons}</div>
-            </div>
-            <div class="price">¥${Math.round(item.selected_price || 0)}</div>
-          </div>
-        `;
-      }).join('');
-
-      const warnings = ([...(response.catalog_warnings || []), ...((response.selection && response.selection.warnings) || [])])
-        .map((w) => `<li class="warning">${w}</li>`)
-        .join('') || `<li>${t('noWarnings')}</li>`;
-
-      const reasons = (response.advice?.reasons || []).map((item) => `<li>${item}</li>`).join('') || `<li>${t('noReasons')}</li>`;
-      const alternatives = response.advice?.alternative_note || t('noAlternative');
-      const upgrades = (response.advice?.upgrade_advice || []).join(' ') || t('noUpgrade');
-
-      results.innerHTML = `
-        <div class="result-grid">
-          <div class="panel card">
-            <h2>${t('summaryTitle')}</h2>
-            <p><strong>${t('summaryLabel')}</strong>${response.advice?.summary || t('noSummary')}</p>
-            <p><strong>${t('totalLabel')}</strong><span class="price">¥${Math.round(response.selection?.estimated_total || 0)}</span></p>
-            <p><strong>${t('itemCountLabel')}</strong>${response.catalog_item_count || 0}</p>
-            <div class="item-list">${items || `<div class="empty">${t('selectedItemsEmpty')}</div>`}</div>
-          </div>
+      items.forEach((item) => {
+        const node = document.createElement('div');
+        node.className = 'result-item';
+        node.innerHTML = `
+          <span class="chip">${item.category || '-'}</span>
           <div>
-            <div class="panel card">
-              <h3>${t('reasonsTitle')}</h3>
-              <ul class="advice-list">${reasons}</ul>
-            </div>
-            <div class="panel card">
-              <h3>${t('warningsTitle')}</h3>
-              <ul class="advice-list">${warnings}</ul>
-            </div>
-            <div class="panel card">
-              <h3>${t('notesTitle')}</h3>
-              <p><strong>${t('upgradeLabel')}</strong> ${upgrades}</p>
-              <p><strong>${t('alternativeLabel')}</strong> ${alternatives}</p>
-            </div>
+            <strong>${item.display_name || '-'}</strong>
+            <div class="muted">${(item.reasons || []).join(' / ') || '暂无说明'}</div>
           </div>
-        </div>
-      `;
+          <strong>￥${item.selected_price || 0}</strong>
+        `;
+        container.appendChild(node);
+      });
     }
 
-    document.querySelectorAll('[data-lang-button]').forEach((button) => {
-      button.addEventListener('click', () => {
-        currentLang = button.dataset.langButton;
-        localStorage.setItem('rigel_console_lang', currentLang);
-        applyLanguage();
-      });
-    });
-
-    form.addEventListener('submit', async (event) => {
+    document.getElementById('recommend-form').addEventListener('submit', async (event) => {
       event.preventDefault();
-      results.innerHTML = `<div class="panel card">${t('loading')}</div>`;
+      const brands = (document.getElementById('brand_preferences').value || '').split(',');
       const payload = {
         budget: Number(document.getElementById('budget').value),
         use_case: document.getElementById('use_case').value,
         build_mode: document.getElementById('build_mode').value,
         brand_preference: {
-          cpu: document.getElementById('brand_cpu').value,
-          gpu: document.getElementById('brand_gpu').value,
+          cpu: (brands[0] || '').trim(),
+          gpu: (brands[1] || '').trim()
         },
-        special_requirements: document.getElementById('special_requirements').value
+        special_requirements: (document.getElementById('special_requirements').value || '')
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        notes: document.getElementById('notes').value.trim(),
+        notes: document.getElementById('notes').value.trim()
       };
-      try {
-        const res = await fetch('/catalog/recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('requestFailed'));
-        renderCatalog(data);
-      } catch (error) {
-        results.innerHTML = `<div class="panel card warning">${error.message}</div>`;
+
+      document.getElementById('request-status').textContent = '请求中';
+      const res = await fetch('/catalog/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Anonymous-Id': anonymousId
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const cooldown = data?.error?.cooldown_seconds ?? 0;
+        document.getElementById('request-status').textContent = data?.error?.message || '请求失败';
+        document.getElementById('cooldown').textContent = `${cooldown} 秒`;
+        return;
       }
+
+      const requestStatus = data.request_status || {};
+      document.getElementById('remaining').textContent = String(requestStatus.remaining_ai_requests ?? '-');
+      document.getElementById('cooldown').textContent = `${requestStatus.cooldown_seconds ?? 0} 秒`;
+      document.getElementById('request-status').textContent = requestStatus.cache_hit ? '已命中缓存' : '已生成新结果';
+      document.getElementById('summary-text').textContent = (data.catalog_warnings || []).join('；') || '价格目录已返回，可继续调整需求后再次生成。';
+      document.getElementById('result-meta').textContent = `目录条目 ${data.catalog_item_count || 0}，估算总价 ￥${data.selection?.estimated_total || 0}`;
+      document.getElementById('advice-summary').textContent = data.advice?.summary || '暂无建议摘要';
+      document.getElementById('advice-detail').textContent = JSON.stringify(data.advice || {}, null, 2);
+      renderItems(data.selection?.selected_items || []);
     });
 
-    applyLanguage();
+    ensureSession().catch(() => {
+      document.getElementById('anonymous-status').textContent = '匿名会话初始化失败';
+    });
   </script>
 </body>
 </html>

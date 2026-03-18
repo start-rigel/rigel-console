@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>givezj8.cn · 后台登录</title>
+  <style>
+    :root {
+      --bg: #f4efe9;
+      --card: rgba(255,255,255,0.92);
+      --ink: #21150e;
+      --muted: #7a675e;
+      --line: rgba(33,21,14,0.12);
+      --accent: #c5672b;
+      --accent-dark: #954a1d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      font-family: "Avenir Next", "PingFang SC", sans-serif; color: var(--ink);
+      background: radial-gradient(circle at top, rgba(197,103,43,0.16), transparent 26%), linear-gradient(180deg, #fbf6f2, var(--bg));
+    }
+    .card {
+      width: min(460px, 100%); background: var(--card); border: 1px solid var(--line);
+      border-radius: 28px; padding: 28px; box-shadow: 0 28px 56px rgba(33,21,14,0.12);
+    }
+    h1 { margin: 0 0 10px; font-size: 42px; letter-spacing: -.05em; }
+    p { color: var(--muted); line-height: 1.7; }
+    form { display: grid; gap: 14px; margin-top: 18px; }
+    label { display: grid; gap: 8px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+    input, button {
+      width: 100%; padding: 14px 16px; font: inherit; border-radius: 16px;
+      border: 1px solid var(--line); background: rgba(255,255,255,0.94); color: var(--ink);
+    }
+    button { border: 0; color: #fff; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, var(--accent-dark), var(--accent)); }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .link { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div>givezj8.cn / admin</div>
+    <h1>后台登录</h1>
+    <p>后台词库管理、导入导出和后续采集操作都从这里进入。前台匿名推荐页和后台管理页已经分离。</p>
+    <form id="login-form">
+      <label>用户名
+        <input id="username" value="admin" required>
+      </label>
+      <label>密码
+        <input id="password" type="password" required>
+      </label>
+      <button type="submit">登录后台</button>
+    </form>
+    <p id="status" class="link">等待登录</p>
+    <div class="actions">
+      <a class="link" href="/">返回前台推荐页</a>
+    </div>
+  </div>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const res = await fetch('/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value.trim(),
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('status').textContent = data.error || '登录失败';
+        return;
+      }
+      window.location.href = '/admin';
+    });
+  </script>
+</body>
+</html>

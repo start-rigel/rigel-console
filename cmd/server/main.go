@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os/signal"
@@ -16,7 +17,10 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
+	configPath := flag.String("config", config.DefaultPath(), "path to YAML config file")
+	flag.Parse()
+
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
@@ -25,7 +29,13 @@ func main() {
 	defer stop()
 
 	buildClient := buildengine.New(cfg.BuildEngineBaseURL)
-	consoleService := consoleservice.New(buildClient)
+	consoleService := consoleservice.New(
+		buildClient,
+		cfg.AdminUsername,
+		cfg.AdminPassword,
+		cfg.AnonymousHourlyLimit,
+		time.Duration(cfg.CooldownSeconds)*time.Second,
+	)
 	application := app.New(cfg, consoleService)
 	server := &http.Server{
 		Addr:         ":" + cfg.HTTPPort,

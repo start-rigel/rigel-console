@@ -3,9 +3,11 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/rigel-labs/rigel-console/internal/config"
 	"github.com/rigel-labs/rigel-console/internal/domain/model"
@@ -41,8 +43,18 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 	}, nil
 }
 
+func newTestApp() *App {
+	cfg := config.Config{
+		ServiceName:         "rigel-console",
+		AdminCookieName:     "rigel_admin_session",
+		AnonymousCookieName: "rigel_anonymous_id",
+	}
+	console := consoleservice.New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	return New(cfg, console)
+}
+
 func TestIndex(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	application := newTestApp()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
@@ -51,9 +63,9 @@ func TestIndex(t *testing.T) {
 	}
 }
 
-func TestKeywordsPage(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
-	req := httptest.NewRequest(http.MethodGet, "/keywords", nil)
+func TestAdminLoginPage(t *testing.T) {
+	application := newTestApp()
+	req := httptest.NewRequest(http.MethodGet, "/admin/login", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -61,43 +73,58 @@ func TestKeywordsPage(t *testing.T) {
 	}
 }
 
-func TestKeywordEditPage(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
-	req := httptest.NewRequest(http.MethodGet, "/keywords/seed-1/edit", nil)
+func TestAdminKeywordsRequiresLogin(t *testing.T) {
+	application := newTestApp()
+	req := httptest.NewRequest(http.MethodGet, "/admin/keywords", nil)
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", rec.Code)
+	}
+}
+
+func TestAdminKeywordAPIWithLogin(t *testing.T) {
+	application := newTestApp()
+	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/keyword-seeds", nil)
+	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAnonymousSession(t *testing.T) {
+	application := newTestApp()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/session/anonymous", nil)
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
-}
-
-func TestKeywordNewPage(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
-	req := httptest.NewRequest(http.MethodGet, "/keywords/new", nil)
-	rec := httptest.NewRecorder()
-	application.Handler().ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+	var payload model.AnonymousSessionResponse
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
 	}
-}
-
-func TestKeywordImportPage(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
-	req := httptest.NewRequest(http.MethodGet, "/keywords/import", nil)
-	rec := httptest.NewRecorder()
-	application.Handler().ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+	if payload.AnonymousID == "" {
+		t.Fatal("expected anonymous id")
 	}
 }
 
 func TestGenerateCatalogRecommendation(t *testing.T) {
-	application := New(config.Config{ServiceName: "rigel-console"}, consoleservice.New(buildClientStub{}))
+	application := newTestApp()
 	body := []byte(`{"budget":6000,"use_case":"gaming","build_mode":"mixed"}`)
 	req := httptest.NewRequest(http.MethodPost, "/catalog/recommend", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var payload model.CatalogRecommendationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.RequestStatus.RemainingAIRequests != 1 {
+		t.Fatalf("expected remaining requests 1, got %d", payload.RequestStatus.RemainingAIRequests)
 	}
 }

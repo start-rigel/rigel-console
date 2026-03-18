@@ -1,10 +1,13 @@
 package console
 
 import (
+	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"github.com/rigel-labs/rigel-console/internal/domain/model"
+	"github.com/xuri/excelize/v2"
 )
 
 type buildClientStub struct{}
@@ -36,16 +39,90 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 	}, nil
 }
 
-func TestGenerateCatalogRecommendation(t *testing.T) {
-	service := New(buildClientStub{})
-	response, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
+func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	req := model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}
+
+	first, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
 	if err != nil {
-		t.Fatalf("GenerateCatalogRecommendation() error = %v", err)
+		t.Fatalf("GenerateCatalogRecommendation() first error = %v", err)
 	}
-	if response.CatalogItemCount != 2 {
-		t.Fatalf("expected 2 catalog items, got %d", response.CatalogItemCount)
+	second, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
+	if err != nil {
+		t.Fatalf("GenerateCatalogRecommendation() second error = %v", err)
 	}
-	if response.Advice == nil || response.Advice.Summary == "" {
-		t.Fatal("expected catalog advice")
+	if first.RequestStatus.CacheHit {
+		t.Fatal("expected first request not to hit cache")
 	}
+	if !second.RequestStatus.CacheHit {
+		t.Fatal("expected second request to hit cache")
+	}
+}
+
+func TestKeywordSeedCRUD(t *testing.T) {
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	item, err := service.CreateKeywordSeed(model.KeywordSeedUpsertRequest{
+		Category:       "cpu",
+		Keyword:        "Ryzen 7 7700",
+		CanonicalModel: "Ryzen 7 7700",
+		Brand:          "AMD",
+		Aliases:        []string{"7700"},
+		Priority:       110,
+		Enabled:        true,
+	})
+	if err != nil {
+		t.Fatalf("CreateKeywordSeed() error = %v", err)
+	}
+	updated, err := service.UpdateKeywordSeed(item.ID, model.KeywordSeedUpsertRequest{
+		Category:       "cpu",
+		Keyword:        "Ryzen 7 7700",
+		CanonicalModel: "Ryzen 7 7700",
+		Brand:          "AMD",
+		Aliases:        []string{"7700", "AMD 7700"},
+		Priority:       120,
+		Enabled:        false,
+		Notes:          "updated",
+	})
+	if err != nil {
+		t.Fatalf("UpdateKeywordSeed() error = %v", err)
+	}
+	if updated.Priority != 120 || updated.Enabled {
+		t.Fatalf("unexpected updated seed: %+v", updated)
+	}
+}
+
+func TestImportKeywordSeeds(t *testing.T) {
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	file := excelize.NewFile()
+	sheet := file.GetSheetName(0)
+	rows := [][]any{
+		{"category", "keyword", "canonical_model", "brand", "aliases", "priority", "enabled", "notes"},
+		{"cpu", "Ryzen 5 9600X", "Ryzen 5 9600X", "AMD", "9600X", 100, true, "new"},
+	}
+	for rowIndex, row := range rows {
+		for colIndex, value := range row {
+			cell, _ := excelize.CoordinatesToCellName(colIndex+1, rowIndex+1)
+			_ = file.SetCellValue(sheet, cell, value)
+		}
+	}
+	buf, err := file.WriteToBuffer()
+	if err != nil {
+		t.Fatalf("WriteToBuffer() error = %v", err)
+	}
+
+	result, err := service.ImportKeywordSeeds(ioNopCloser{Reader: bytes.NewReader(buf.Bytes())})
+	if err != nil {
+		t.Fatalf("ImportKeywordSeeds() error = %v", err)
+	}
+	if result.ImportedCount != 1 {
+		t.Fatalf("expected imported count 1, got %d", result.ImportedCount)
+	}
+}
+
+type ioNopCloser struct {
+	*bytes.Reader
+}
+
+func (ioNopCloser) Close() error {
+	return nil
 }

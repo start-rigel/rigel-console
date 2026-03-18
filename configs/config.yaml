@@ -1,0 +1,14 @@
+service_name: rigel-console
+http_port: "18084"
+log_level: debug
+frontend_mode: embedded
+build_engine_base_url: http://rigel-build-engine:18082
+admin_username: admin
+admin_password: admin123456
+admin_cookie_name: rigel_admin_session
+anonymous_cookie_name: rigel_anonymous_id
+anonymous_hourly_limit: 5
+cooldown_seconds: 60
+read_timeout: 5s
+write_timeout: 2m
+idle_timeout: 30s

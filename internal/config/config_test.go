@@ -1,14 +1,22 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestLoadDefaults(t *testing.T) {
-	t.Setenv("RIGEL_SERVICE_NAME", "")
-	t.Setenv("RIGEL_HTTP_PORT", "")
-	t.Setenv("RIGEL_HTTP_READ_TIMEOUT", "")
-	t.Setenv("RIGEL_HTTP_WRITE_TIMEOUT", "")
-	t.Setenv("RIGEL_HTTP_IDLE_TIMEOUT", "")
-	cfg, err := Load()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := []byte("" +
+		"http_port: \"18084\"\n" +
+		"build_engine_base_url: http://rigel-build-engine:18082\n")
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	cfg, err := Load(path)
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}

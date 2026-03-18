@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // GenerateBuildRequest is the console-facing request contract for recommendation creation.
 type GenerateBuildRequest struct {
 	Budget              float64         `json:"budget"`
@@ -17,10 +19,17 @@ type BrandPreference struct {
 
 // CatalogRecommendationResponse is the user-facing recommendation assembled from the aggregated price catalog.
 type CatalogRecommendationResponse struct {
+	RequestStatus    RequestStatus    `json:"request_status"`
 	CatalogItemCount int              `json:"catalog_item_count"`
 	CatalogWarnings  []string         `json:"catalog_warnings,omitempty"`
 	Selection        CatalogSelection `json:"selection"`
 	Advice           *Advice          `json:"advice,omitempty"`
+}
+
+type RequestStatus struct {
+	CacheHit            bool `json:"cache_hit"`
+	RemainingAIRequests int  `json:"remaining_ai_requests"`
+	CooldownSeconds     int  `json:"cooldown_seconds"`
 }
 
 // CatalogSelection is the selected shopping list draft returned from build-engine.
@@ -92,4 +101,73 @@ type CatalogAdviceResponse struct {
 	FallbackUsed bool             `json:"fallback_used"`
 	Selection    CatalogSelection `json:"selection"`
 	Advisory     Advice           `json:"advisory"`
+}
+
+type AnonymousSessionResponse struct {
+	AnonymousID         string `json:"anonymous_id"`
+	CooldownSeconds     int    `json:"cooldown_seconds"`
+	RemainingAIRequests int    `json:"remaining_ai_requests"`
+	ChallengeRequired   bool   `json:"challenge_required"`
+}
+
+type KeywordSeed struct {
+	ID             string    `json:"id"`
+	Category       string    `json:"category"`
+	Keyword        string    `json:"keyword"`
+	CanonicalModel string    `json:"canonical_model"`
+	Brand          string    `json:"brand,omitempty"`
+	Aliases        []string  `json:"aliases,omitempty"`
+	Priority       int       `json:"priority"`
+	Enabled        bool      `json:"enabled"`
+	Notes          string    `json:"notes,omitempty"`
+	CreatedAt      time.Time `json:"created_at,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at,omitempty"`
+}
+
+type KeywordSeedUpsertRequest struct {
+	Category       string   `json:"category"`
+	Keyword        string   `json:"keyword"`
+	CanonicalModel string   `json:"canonical_model"`
+	Brand          string   `json:"brand,omitempty"`
+	Aliases        []string `json:"aliases,omitempty"`
+	Priority       int      `json:"priority"`
+	Enabled        bool     `json:"enabled"`
+	Notes          string   `json:"notes,omitempty"`
+}
+
+type KeywordSeedListResponse struct {
+	Items    []KeywordSeed `json:"items"`
+	Page     int           `json:"page"`
+	PageSize int           `json:"page_size"`
+	Total    int           `json:"total"`
+}
+
+type KeywordSeedFilter struct {
+	Category string
+	Brand    string
+	Keyword  string
+	Enabled  *bool
+	Page     int
+	PageSize int
+}
+
+type AdminLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type AdminLoginResponse struct {
+	Username string `json:"username"`
+}
+
+type KeywordSeedImportError struct {
+	Row     int    `json:"row"`
+	Message string `json:"message"`
+}
+
+type KeywordSeedImportResponse struct {
+	JobID         string                   `json:"job_id"`
+	ImportedCount int                      `json:"imported_count"`
+	FailedCount   int                      `json:"failed_count"`
+	Errors        []KeywordSeedImportError `json:"errors,omitempty"`
 }

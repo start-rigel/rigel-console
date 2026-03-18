@@ -3,507 +3,128 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>givezj8.cn · 型号词库</title>
+  <title>givezj8.cn · 后台词库列表</title>
   <style>
-    :root {
-      --bg: #e8eef2;
-      --bg-grid: rgba(39, 91, 122, 0.09);
-      --panel: rgba(255,255,255,0.80);
-      --panel-strong: rgba(255,255,255,0.92);
-      --ink: #0f1b24;
-      --muted: #587082;
-      --line: rgba(15, 27, 36, 0.12);
-      --accent: #1293d1;
-      --accent-soft: rgba(18,147,209,0.14);
-      --accent-strong: #086fa1;
-      --shadow: 0 24px 64px rgba(14, 35, 50, 0.14);
+    body { margin:0; min-height:100vh; font-family:"Avenir Next","PingFang SC",sans-serif; background:#f5f7fb; color:#172028; }
+    .shell { max-width:1220px; margin:0 auto; padding:28px 20px 64px; }
+    .toolbar, .filters, .table-card { display:grid; gap:16px; }
+    .toolbar { grid-template-columns: 1fr auto; align-items:center; }
+    .links { display:flex; gap:10px; flex-wrap:wrap; }
+    .link, button, input, select {
+      font:inherit; padding:12px 14px; border-radius:14px; border:1px solid rgba(23,32,40,0.12);
+      background:#fff; color:#22303a;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--ink);
-      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
-      background:
-        linear-gradient(var(--bg-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
-        radial-gradient(circle at top right, rgba(18,147,209,0.16), transparent 28%),
-        linear-gradient(180deg, #eef4f7, var(--bg));
-      background-size: 28px 28px, 28px 28px, auto, auto;
-    }
-    a { color: inherit; text-decoration: none; }
-    .shell { max-width: 1260px; margin: 0 auto; padding: 28px 20px 56px; }
-    .topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .brandline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .domain-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.72);
-      color: var(--accent-strong);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px;
-      background: rgba(255,255,255,0.72);
-      gap: 4px;
-    }
-    .lang-switch button {
-      width: auto;
-      min-width: 64px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      box-shadow: none;
-      cursor: pointer;
-    }
-    .lang-switch button.active {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      color: #fff;
-    }
-    .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-    .nav a {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.64);
-      color: var(--muted);
-      transition: .18s ease;
-    }
-    .nav a:hover, .nav a.active {
-      background: rgba(18,147,209,0.12);
-      color: var(--ink);
-      border-color: rgba(18,147,209,0.32);
-    }
-    .topbar {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .brand h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.05em; }
-    .brand p { margin: 8px 0 0; color: var(--muted); max-width: 560px; line-height: 1.7; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
-    }
-    .panel-strong { background: var(--panel-strong); }
-    .grid { display: grid; grid-template-columns: 320px 1fr; gap: 18px; }
-    .panel-inner { padding: 22px; }
-    .section-title { margin: 0 0 14px; font-size: 20px; letter-spacing: -0.03em; }
-    .field { display: grid; gap: 8px; margin-bottom: 12px; }
-    .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-    input, select, .button {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 13px 14px;
-      background: rgba(255,255,255,0.78);
-      color: var(--ink);
-      font: inherit;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: rgba(18,147,209,0.45);
-      box-shadow: 0 0 0 4px rgba(18,147,209,0.10);
-    }
-    .button { cursor: pointer; background: rgba(255,255,255,0.72); }
-    .button.primary {
-      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-      border-color: transparent;
-      color: #fff;
-      font-weight: 700;
-    }
-    .button.ghost { background: rgba(255,255,255,0.72); }
-    .button.small { width: auto; padding: 9px 12px; font-size: 13px; }
-    .table-header {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    table { width: 100%; border-collapse: collapse; }
-    thead th {
-      text-align: left;
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0 0 12px;
-    }
-    tbody td {
-      padding: 16px 0;
-      border-top: 1px solid var(--line);
-      vertical-align: top;
-    }
-    .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); }
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .hint { color: var(--muted); font-size: 14px; line-height: 1.6; }
-    .empty { color: var(--muted); padding: 26px 0; }
-    .status { margin-top: 14px; color: var(--muted); font-size: 14px; }
-    @media (max-width: 960px) {
-      .grid { grid-template-columns: 1fr; }
-      .topbar { flex-direction: column; align-items: flex-start; }
-      .table-header { flex-direction: column; }
-      table, thead, tbody, tr, th, td { display: block; }
-      thead { display: none; }
-      tbody tr { border-top: 1px solid var(--line); padding: 16px 0; display: grid; gap: 6px; }
-      tbody td { border-top: 0; padding: 0; }
+    button { cursor:pointer; }
+    .primary { background:#0a6c52; color:#fff; border:0; }
+    .filters { grid-template-columns: repeat(4, 1fr) auto; margin-top:18px; }
+    .table-card { background:#fff; border:1px solid rgba(23,32,40,0.08); border-radius:24px; padding:22px; box-shadow:0 18px 40px rgba(23,32,40,0.08); margin-top:18px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding:14px 0; border-top:1px solid rgba(23,32,40,0.08); vertical-align:top; }
+    thead th { border-top:0; color:#6a7783; font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .muted { color:#6a7783; }
+    @media (max-width: 980px) {
+      .toolbar, .filters { grid-template-columns: 1fr; }
+      table, thead, tbody, tr, th, td { display:block; }
+      thead { display:none; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
-    <div class="topline">
-      <div class="brandline">
-        <span class="domain-badge">givezj8.cn</span>
-        <span class="chip" data-i18n="panelTag">keyword operations</span>
+    <div class="toolbar">
+      <div>
+        <div class="muted">givezj8.cn / admin</div>
+        <h1 style="margin:8px 0 0; font-size:52px; letter-spacing:-.05em;">词库列表</h1>
       </div>
-      <div class="lang-switch" aria-label="Language switch">
-        <button type="button" data-lang-button="zh">中文</button>
-        <button type="button" data-lang-button="en">EN</button>
-      </div>
-    </div>
-
-    <nav class="nav">
-      <a href="/" data-i18n="navHome">推荐首页</a>
-      <a class="active" href="/keywords" data-i18n="navKeywords">词库列表</a>
-      <a href="/keywords/new" data-i18n="navNew">新增词条</a>
-      <a href="/keywords/import" data-i18n="navImport">Excel 导入</a>
-    </nav>
-
-    <div class="topbar">
-      <div class="brand">
-        <h1 data-i18n="title">Keyword Matrix</h1>
-        <p data-i18n="subtitle">这里维护 JD 搜索使用的主流型号词库。第一版只解决筛选、启停、导入导出和基础编辑，不做复杂运营后台。</p>
+      <div class="links">
+        <a class="link" href="/admin">后台首页</a>
+        <a class="link" href="/admin/keywords/new">新增词条</a>
+        <a class="link" href="/admin/keywords/import">Excel 导入</a>
+        <a class="link" href="/admin/api/v1/keyword-seeds/export">导出 Excel</a>
       </div>
     </div>
 
-    <div class="grid">
-      <aside class="panel panel-strong">
-        <div class="panel-inner">
-          <h2 class="section-title" data-i18n="filterTitle">筛选条件</h2>
-          <div class="field">
-            <label for="category" data-i18n="fieldCategory">Category</label>
-            <select id="category">
-              <option value="" data-i18n-option="allCategories">全部类别</option>
-              <option value="cpu">cpu</option>
-              <option value="gpu">gpu</option>
-              <option value="motherboard">motherboard</option>
-              <option value="ram">ram</option>
-              <option value="ssd">ssd</option>
-              <option value="psu">psu</option>
-              <option value="case">case</option>
-              <option value="cooler">cooler</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="brand" data-i18n="fieldBrand">Brand</label>
-            <input id="brand" type="text" data-i18n-placeholder="brandPlaceholder" placeholder="例如 AMD / NVIDIA">
-          </div>
-          <div class="field">
-            <label for="keyword" data-i18n="fieldKeyword">Keyword</label>
-            <input id="keyword" type="text" data-i18n-placeholder="keywordPlaceholder" placeholder="例如 7500F / RTX 4060">
-          </div>
-          <div class="field">
-            <label for="enabled" data-i18n="fieldEnabled">Enabled</label>
-            <select id="enabled">
-              <option value="" data-i18n-option="all">全部</option>
-              <option value="true" data-i18n-option="enabled">启用</option>
-              <option value="false" data-i18n-option="disabled">停用</option>
-            </select>
-          </div>
-          <button class="button primary" id="search-btn" type="button" data-i18n="searchButton">查询词库</button>
-          <div class="status" id="filter-status" data-i18n="filterStatusIdle">页面会请求 `/api/v1/keyword-seeds`。如果接口还没实现，这里会显示错误信息。</div>
-        </div>
-      </aside>
-
-      <section class="panel">
-        <div class="panel-inner">
-          <div class="table-header">
-            <div>
-              <h2 class="section-title" data-i18n="tableTitle">当前词条</h2>
-              <p class="hint" data-i18n="tableHint">列表页负责查看、筛选、启停和导出。文档中的字段都已经映射到这张表里。</p>
-            </div>
-            <div class="row-actions">
-              <a class="button ghost small" href="/keywords/import" data-i18n="importButton">导入 Excel</a>
-              <a class="button ghost small" href="/api/v1/keyword-seeds/export" data-i18n="exportButton">导出 Excel</a>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th data-i18n="thCategory">Category</th>
-                <th data-i18n="thKeyword">Keyword</th>
-                <th data-i18n="thCanonical">Canonical</th>
-                <th data-i18n="thBrandAliases">Brand / Aliases</th>
-                <th data-i18n="thPriority">Priority</th>
-                <th data-i18n="thStatus">Status</th>
-                <th data-i18n="thActions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="keyword-table">
-              <tr>
-                <td colspan="7" class="empty" id="table-empty" data-i18n="tableWaiting">等待加载词库数据。</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+    <div class="filters">
+      <select id="category">
+        <option value="">全部类别</option>
+        <option value="cpu">cpu</option>
+        <option value="gpu">gpu</option>
+        <option value="motherboard">motherboard</option>
+        <option value="ram">ram</option>
+        <option value="ssd">ssd</option>
+        <option value="psu">psu</option>
+        <option value="case">case</option>
+        <option value="cooler">cooler</option>
+      </select>
+      <input id="brand" placeholder="品牌">
+      <input id="keyword" placeholder="关键词">
+      <select id="enabled">
+        <option value="">启用状态</option>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+      <button class="primary" id="reload-btn" type="button">刷新</button>
     </div>
+
+    <section class="table-card">
+      <p id="status" class="muted">读取中</p>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>类别</th><th>关键词</th><th>标准型号</th><th>品牌</th><th>状态</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
   </div>
-
   <script>
-    const i18n = {
-      zh: {
-        pageTitle: 'givezj8.cn · 型号词库',
-        panelTag: 'keyword operations',
-        navHome: '推荐首页',
-        navKeywords: '词库列表',
-        navNew: '新增词条',
-        navImport: 'Excel 导入',
-        title: 'Keyword Matrix',
-        subtitle: '这里维护 JD 搜索使用的主流型号词库。第一版只解决筛选、启停、导入导出和基础编辑，不做复杂运营后台。',
-        filterTitle: '筛选条件',
-        fieldCategory: 'Category',
-        fieldBrand: 'Brand',
-        fieldKeyword: 'Keyword',
-        fieldEnabled: 'Enabled',
-        brandPlaceholder: '例如 AMD / NVIDIA',
-        keywordPlaceholder: '例如 7500F / RTX 4060',
-        allCategories: '全部类别',
-        all: '全部',
-        enabled: '启用',
-        disabled: '停用',
-        searchButton: '查询词库',
-        filterStatusIdle: '页面会请求 `/api/v1/keyword-seeds`。如果接口还没实现，这里会显示错误信息。',
-        tableTitle: '当前词条',
-        tableHint: '列表页负责查看、筛选、启停和导出。文档中的字段都已经映射到这张表里。',
-        importButton: '导入 Excel',
-        exportButton: '导出 Excel',
-        thCategory: 'Category',
-        thKeyword: 'Keyword',
-        thCanonical: 'Canonical',
-        thBrandAliases: 'Brand / Aliases',
-        thPriority: 'Priority',
-        thStatus: 'Status',
-        thActions: 'Actions',
-        tableWaiting: '等待加载词库数据。',
-        tableNoMatch: '没有匹配到词条。',
-        loadStatus: '正在加载词库...',
-        loadDone: '已加载 {count} 条词条。',
-        loadUnavailable: '当前接口未返回可用数据。',
-        aliasesNone: '—',
-        enabledLabel: '启用',
-        disabledLabel: '停用',
-        enableAction: '启用',
-        disableAction: '停用',
-        editAction: '编辑',
-        actionFailed: '操作失败'
-      },
-      en: {
-        pageTitle: 'givezj8.cn · Keyword Seeds',
-        panelTag: 'keyword operations',
-        navHome: 'Recommend',
-        navKeywords: 'Keyword Seeds',
-        navNew: 'New Seed',
-        navImport: 'Excel Import',
-        title: 'Keyword Matrix',
-        subtitle: 'This page maintains the mainstream model seed list used for JD search. V1 only covers filtering, enable/disable, import/export, and basic editing.',
-        filterTitle: 'Filters',
-        fieldCategory: 'Category',
-        fieldBrand: 'Brand',
-        fieldKeyword: 'Keyword',
-        fieldEnabled: 'Enabled',
-        brandPlaceholder: 'for example AMD / NVIDIA',
-        keywordPlaceholder: 'for example 7500F / RTX 4060',
-        allCategories: 'All Categories',
-        all: 'All',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
-        searchButton: 'Search Seeds',
-        filterStatusIdle: 'This page requests `/api/v1/keyword-seeds`. If the API is not implemented yet, the error will show here.',
-        tableTitle: 'Current Seeds',
-        tableHint: 'The list page handles viewing, filtering, enable/disable, and export. The displayed fields already match the documented contract.',
-        importButton: 'Import Excel',
-        exportButton: 'Export Excel',
-        thCategory: 'Category',
-        thKeyword: 'Keyword',
-        thCanonical: 'Canonical',
-        thBrandAliases: 'Brand / Aliases',
-        thPriority: 'Priority',
-        thStatus: 'Status',
-        thActions: 'Actions',
-        tableWaiting: 'Waiting for keyword data.',
-        tableNoMatch: 'No matching seeds found.',
-        loadStatus: 'Loading keyword seeds...',
-        loadDone: 'Loaded {count} seed items.',
-        loadUnavailable: 'The API did not return usable data.',
-        aliasesNone: '—',
-        enabledLabel: 'Enabled',
-        disabledLabel: 'Disabled',
-        enableAction: 'Enable',
-        disableAction: 'Disable',
-        editAction: 'Edit',
-        actionFailed: 'action failed'
-      }
-    };
-
-    const tableBody = document.getElementById('keyword-table');
-    const statusEl = document.getElementById('filter-status');
-    let currentLang = localStorage.getItem('rigel_console_lang') || 'zh';
-
-    function t(key) {
-      return i18n[currentLang][key] || key;
-    }
-
-    function formatText(key, values = {}) {
-      return t(key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
-    }
-
-    function applyLanguage() {
-      document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-      document.title = t('pageTitle');
-      document.querySelectorAll('[data-i18n]').forEach((el) => {
-        el.textContent = t(el.dataset.i18n);
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-        el.placeholder = t(el.dataset.i18nPlaceholder);
-      });
-      document.querySelectorAll('[data-i18n-option]').forEach((el) => {
-        el.textContent = t(el.dataset.i18nOption);
-      });
-      document.querySelectorAll('[data-lang-button]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.langButton === currentLang);
-      });
-    }
-
-    function encodeQuery(params) {
+    async function loadSeeds() {
       const query = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== '' && value !== null && value !== undefined) {
-          query.set(key, value);
-        }
+      ['category', 'brand', 'keyword', 'enabled'].forEach((id) => {
+        const value = document.getElementById(id).value.trim();
+        if (value) query.set(id, value);
       });
-      return query.toString();
-    }
-
-    function renderRows(items) {
-      if (!items || items.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="7" class="empty">${t('tableNoMatch')}</td></tr>`;
+      const res = await fetch(`/admin/api/v1/keyword-seeds?${query.toString()}`);
+      if (!res.ok) {
+        document.getElementById('status').textContent = '读取词库失败';
         return;
       }
-      tableBody.innerHTML = items.map((item) => {
-        const aliases = (item.aliases || []).join(', ') || t('aliasesNone');
-        const enabledLabel = item.enabled ? t('enabledLabel') : t('disabledLabel');
-        const nextAction = item.enabled ? 'disable' : 'enable';
-        const nextLabel = item.enabled ? t('disableAction') : t('enableAction');
-        return `
-          <tr>
-            <td><span class="chip">${item.category || '—'}</span></td>
-            <td>
-              <div>${item.keyword || '—'}</div>
-              <div class="mono">${item.id || ''}</div>
-            </td>
-            <td>${item.canonical_model || '—'}</td>
-            <td>
-              <div>${item.brand || '—'}</div>
-              <div class="hint">${aliases}</div>
-            </td>
-            <td>${item.priority ?? '—'}</td>
-            <td>${enabledLabel}</td>
-            <td>
-              <div class="row-actions">
-                <a class="button ghost small" href="/keywords/${item.id}/edit">${t('editAction')}</a>
-                <button class="button ghost small" type="button" onclick="toggleSeed('${item.id}', '${nextAction}')">${nextLabel}</button>
-              </div>
-            </td>
-          </tr>
+      const data = await res.json();
+      document.getElementById('status').textContent = `共 ${data.total || 0} 条`;
+      const rows = document.getElementById('rows');
+      rows.innerHTML = '';
+      (data.items || []).forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.id}</td>
+          <td>${item.category}</td>
+          <td>${item.keyword}</td>
+          <td>${item.canonical_model}</td>
+          <td>${item.brand || '-'}</td>
+          <td>${item.enabled}</td>
+          <td>
+            <div class="actions">
+              <a class="link" href="/admin/keywords/${item.id}/edit">编辑</a>
+              <button type="button" data-id="${item.id}" data-enabled="${item.enabled}">
+                ${item.enabled ? '停用' : '启用'}
+              </button>
+            </div>
+          </td>
         `;
-      }).join('');
-    }
-
-    async function loadSeeds() {
-      const params = {
-        category: document.getElementById('category').value,
-        brand: document.getElementById('brand').value.trim(),
-        keyword: document.getElementById('keyword').value.trim(),
-        enabled: document.getElementById('enabled').value,
-        page: 1,
-        page_size: 20,
-      };
-      statusEl.textContent = t('loadStatus');
-      try {
-        const res = await fetch(`/api/v1/keyword-seeds?${encodeQuery(params)}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('actionFailed'));
-        renderRows(data.items || []);
-        statusEl.textContent = formatText('loadDone', { count: data.items?.length || 0 });
-      } catch (error) {
-        tableBody.innerHTML = `<tr><td colspan="7" class="empty">${t('loadUnavailable')}</td></tr>`;
-        statusEl.textContent = error.message;
-      }
-    }
-
-    async function toggleSeed(id, action) {
-      try {
-        const res = await fetch(`/api/v1/keyword-seeds/${id}/${action}`, { method: 'POST' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || t('actionFailed'));
-        await loadSeeds();
-      } catch (error) {
-        statusEl.textContent = error.message;
-      }
-    }
-
-    document.querySelectorAll('[data-lang-button]').forEach((button) => {
-      button.addEventListener('click', () => {
-        currentLang = button.dataset.langButton;
-        localStorage.setItem('rigel_console_lang', currentLang);
-        applyLanguage();
-        loadSeeds();
+        rows.appendChild(tr);
       });
-    });
-
-    document.getElementById('search-btn').addEventListener('click', loadSeeds);
-    window.toggleSeed = toggleSeed;
-    applyLanguage();
+      rows.querySelectorAll('button[data-id]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const id = button.getAttribute('data-id');
+          const enabled = button.getAttribute('data-enabled') === 'true';
+          await fetch(`/admin/api/v1/keyword-seeds/${id}/${enabled ? 'disable' : 'enable'}`, { method: 'POST' });
+          loadSeeds();
+        });
+      });
+    }
+    document.getElementById('reload-btn').addEventListener('click', loadSeeds);
     loadSeeds();
   </script>
 </body>
