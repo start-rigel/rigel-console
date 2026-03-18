@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rigel Console · 推荐首页</title>
+  <title>givezj8.cn · AI 装机推荐</title>
   <style>
     :root {
       --bg: #e8eef2;
@@ -38,6 +38,55 @@
     }
     a { color: inherit; text-decoration: none; }
     .shell { max-width: 1220px; margin: 0 auto; padding: 28px 20px 56px; }
+    .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .brandline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .domain-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.72);
+      color: var(--accent-strong);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lang-switch {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px;
+      background: rgba(255,255,255,0.72);
+      gap: 4px;
+    }
+    .lang-switch button {
+      width: auto;
+      min-width: 64px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+    }
+    .lang-switch button.active {
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      color: #fff;
+    }
     .nav {
       display: flex;
       gap: 10px;
@@ -221,33 +270,43 @@
 </head>
 <body>
   <div class="shell">
+    <div class="topline">
+      <div class="brandline">
+        <span class="domain-badge">givezj8.cn</span>
+        <span class="eyebrow" data-i18n="eyebrow">AI Hardware Recommendation</span>
+      </div>
+      <div class="lang-switch" aria-label="Language switch">
+        <button type="button" data-lang-button="zh">中文</button>
+        <button type="button" data-lang-button="en">EN</button>
+      </div>
+    </div>
+
     <nav class="nav">
-      <a class="active" href="/">推荐首页</a>
-      <a href="/keywords">词库列表</a>
-      <a href="/keywords/new">新增词条</a>
-      <a href="/keywords/import">Excel 导入</a>
+      <a class="active" href="/" data-i18n="navHome">推荐首页</a>
+      <a href="/keywords" data-i18n="navKeywords">词库列表</a>
+      <a href="/keywords/new" data-i18n="navNew">新增词条</a>
+      <a href="/keywords/import" data-i18n="navImport">Excel 导入</a>
     </nav>
 
     <section class="hero">
       <div class="panel panel-strong form-panel">
-        <span class="eyebrow">Rigel Console</span>
-        <h1 class="title">AI Hardware<br>Briefing</h1>
-        <p class="subtitle">我们把用户需求收成结构化 `user_request`，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 对齐的是文档里已经定下来的字段，不额外扩范围。</p>
+        <h1 class="title" data-i18n-html="heroTitle">给我装机吧<br>AI Briefing</h1>
+        <p class="subtitle" data-i18n="heroSubtitle">givezj8.cn 把用户需求收成结构化 user_request，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 默认支持中英文切换，字段仍然严格对齐文档约定。</p>
         <form id="build-form">
-          <label>预算
+          <label data-i18n="fieldBudget">预算
             <input id="budget" type="number" min="1000" step="100" value="6000" required>
           </label>
           <div class="grid-2">
-            <label>用途
+            <label data-i18n="fieldUsage">用途
               <select id="use_case">
-                <option value="gaming">gaming</option>
-                <option value="office">office</option>
-                <option value="design">design</option>
-                <option value="streaming">streaming</option>
-                <option value="general">general</option>
+                <option value="gaming" data-i18n-option="usage_gaming">gaming</option>
+                <option value="office" data-i18n-option="usage_office">office</option>
+                <option value="design" data-i18n-option="usage_design">design</option>
+                <option value="streaming" data-i18n-option="usage_streaming">streaming</option>
+                <option value="general" data-i18n-option="usage_general">general</option>
               </select>
             </label>
-            <label>模式
+            <label data-i18n="fieldMode">模式
               <select id="build_mode">
                 <option value="new_only">new_only</option>
                 <option value="mixed">mixed</option>
@@ -256,111 +315,260 @@
             </label>
           </div>
           <div class="grid-2">
-            <label>CPU 偏好
+            <label data-i18n="fieldCpuPreference">CPU 偏好
               <select id="brand_cpu">
-                <option value="">any</option>
+                <option value="" data-i18n-option="any">any</option>
                 <option value="amd">amd</option>
                 <option value="intel">intel</option>
               </select>
             </label>
-            <label>GPU 偏好
+            <label data-i18n="fieldGpuPreference">GPU 偏好
               <select id="brand_gpu">
-                <option value="">any</option>
+                <option value="" data-i18n-option="any">any</option>
                 <option value="nvidia">nvidia</option>
                 <option value="amd">amd</option>
                 <option value="intel">intel</option>
               </select>
             </label>
           </div>
-          <label>特殊要求
-            <input id="special_requirements" type="text" placeholder="例如 wifi_motherboard, low_noise">
+          <label data-i18n="fieldSpecialRequirements">特殊要求
+            <input id="special_requirements" type="text" data-i18n-placeholder="specialRequirementsPlaceholder" placeholder="例如 wifi_motherboard, low_noise">
           </label>
-          <label>补充说明
-            <textarea id="notes" placeholder="例如：1080p 游戏为主，希望噪音尽量低。"></textarea>
+          <label data-i18n="fieldNotes">补充说明
+            <textarea id="notes" data-i18n-placeholder="notesPlaceholder" placeholder="例如：1080p 游戏为主，希望噪音尽量低。"></textarea>
           </label>
-          <button type="submit">生成推荐</button>
+          <button type="submit" id="submit-button" data-i18n="submitButton">生成推荐</button>
         </form>
       </div>
 
       <aside class="panel meta-panel">
         <div class="metric">
-          <span class="eyebrow">Request</span>
+          <span class="eyebrow" data-i18n="metricRequestTag">Request</span>
           <strong>user_request</strong>
-          <small>预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。</small>
+          <small data-i18n="metricRequestBody">预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。</small>
         </div>
         <div class="metric">
-          <span class="eyebrow">Route</span>
+          <span class="eyebrow" data-i18n="metricRouteTag">Route</span>
           <strong>POST /catalog/recommend</strong>
-          <small>Console 保持薄壳，推荐生成仍然交给 build-engine。</small>
+          <small data-i18n="metricRouteBody">Console 保持薄壳，推荐生成仍然交给 build-engine。</small>
         </div>
         <div class="metric">
-          <span class="eyebrow">Output</span>
+          <span class="eyebrow" data-i18n="metricOutputTag">Output</span>
           <strong>summary / parts / total</strong>
-          <small>结果区直接对应当前 API 契约里的结构化推荐输出。</small>
+          <small data-i18n="metricOutputBody">结果区直接对应当前 API 契约里的结构化推荐输出。</small>
         </div>
       </aside>
     </section>
 
     <section class="results" id="results">
-      <div class="panel card empty">推荐结果会显示在这里。</div>
+      <div class="panel card empty" id="results-empty" data-i18n="resultsEmpty">推荐结果会显示在这里。</div>
     </section>
   </div>
 
   <script>
+    const i18n = {
+      zh: {
+        pageTitle: 'givezj8.cn · AI 装机推荐',
+        eyebrow: 'AI Hardware Recommendation',
+        navHome: '推荐首页',
+        navKeywords: '词库列表',
+        navNew: '新增词条',
+        navImport: 'Excel 导入',
+        heroTitle: '给我装机吧<br>AI Briefing',
+        heroSubtitle: 'givezj8.cn 把用户需求收成结构化 user_request，再由 build-engine 结合当前型号级价格清单输出一份可读的推荐结果。当前这版 UI 默认支持中英文切换，字段仍然严格对齐文档约定。',
+        fieldBudget: '预算',
+        fieldUsage: '用途',
+        fieldMode: '模式',
+        fieldCpuPreference: 'CPU 偏好',
+        fieldGpuPreference: 'GPU 偏好',
+        fieldSpecialRequirements: '特殊要求',
+        fieldNotes: '补充说明',
+        submitButton: '生成推荐',
+        metricRequestTag: 'Request',
+        metricRequestBody: '预算、用途、品牌偏好、特殊要求、补充说明，和文档字段完全一致。',
+        metricRouteTag: 'Route',
+        metricRouteBody: 'Console 保持薄壳，推荐生成仍然交给 build-engine。',
+        metricOutputTag: 'Output',
+        metricOutputBody: '结果区直接对应当前 API 契约里的结构化推荐输出。',
+        resultsEmpty: '推荐结果会显示在这里。',
+        usage_gaming: '游戏',
+        usage_office: '办公',
+        usage_design: '设计',
+        usage_streaming: '直播',
+        usage_general: '通用',
+        any: '不限',
+        specialRequirementsPlaceholder: '例如 wifi_motherboard, low_noise',
+        notesPlaceholder: '例如：1080p 游戏为主，希望噪音尽量低。',
+        loading: '正在生成推荐，请稍等...',
+        summaryTitle: '推荐结果',
+        summaryLabel: '摘要：',
+        totalLabel: '估算总价：',
+        itemCountLabel: '目录样本数：',
+        selectedItemsEmpty: '当前没有返回选中的配件项。',
+        reasonsTitle: '推荐理由',
+        warningsTitle: '风险提示',
+        notesTitle: '补充说明',
+        upgradeLabel: '升级建议：',
+        alternativeLabel: '备选说明：',
+        noWarnings: '当前没有额外警告。',
+        noReasons: '当前未返回推荐理由。',
+        noAlternative: '暂无。',
+        noUpgrade: '暂无。',
+        noSummary: '当前未返回摘要。',
+        requestFailed: '请求失败',
+        platformFallback: 'catalog'
+      },
+      en: {
+        pageTitle: 'givezj8.cn · AI PC Recommendation',
+        eyebrow: 'AI Hardware Recommendation',
+        navHome: 'Recommend',
+        navKeywords: 'Keyword Seeds',
+        navNew: 'New Seed',
+        navImport: 'Excel Import',
+        heroTitle: 'Give ZJ8<br>AI Briefing',
+        heroSubtitle: 'givezj8.cn turns user intent into a structured user_request, then lets build-engine combine it with the current model-level price catalog and return a readable recommendation. This UI now supports both Chinese and English without changing the contract.',
+        fieldBudget: 'Budget',
+        fieldUsage: 'Usage',
+        fieldMode: 'Mode',
+        fieldCpuPreference: 'CPU Preference',
+        fieldGpuPreference: 'GPU Preference',
+        fieldSpecialRequirements: 'Special Requirements',
+        fieldNotes: 'Notes',
+        submitButton: 'Generate Recommendation',
+        metricRequestTag: 'Request',
+        metricRequestBody: 'Budget, usage, brand preference, special requirements, and notes stay aligned with the documented request schema.',
+        metricRouteTag: 'Route',
+        metricRouteBody: 'Console remains a thin shell. Recommendation generation still belongs to build-engine.',
+        metricOutputTag: 'Output',
+        metricOutputBody: 'The result panel maps directly to the structured recommendation fields defined in the current API contract.',
+        resultsEmpty: 'Recommendation output will appear here.',
+        usage_gaming: 'Gaming',
+        usage_office: 'Office',
+        usage_design: 'Design',
+        usage_streaming: 'Streaming',
+        usage_general: 'General',
+        any: 'Any',
+        specialRequirementsPlaceholder: 'for example wifi_motherboard, low_noise',
+        notesPlaceholder: 'for example: focus on 1080p gaming, prefer a quieter build.',
+        loading: 'Generating recommendation...',
+        summaryTitle: 'Recommendation',
+        summaryLabel: 'Summary:',
+        totalLabel: 'Estimated Total:',
+        itemCountLabel: 'Catalog Items:',
+        selectedItemsEmpty: 'No selected part items returned.',
+        reasonsTitle: 'Reasons',
+        warningsTitle: 'Warnings',
+        notesTitle: 'Additional Notes',
+        upgradeLabel: 'Upgrade:',
+        alternativeLabel: 'Alternative:',
+        noWarnings: 'No extra warnings returned.',
+        noReasons: 'No recommendation reasons returned.',
+        noAlternative: 'None.',
+        noUpgrade: 'None.',
+        noSummary: 'No summary returned.',
+        requestFailed: 'request failed',
+        platformFallback: 'catalog'
+      }
+    };
+
     const form = document.getElementById('build-form');
     const results = document.getElementById('results');
+    let currentLang = localStorage.getItem('rigel_console_lang') || 'zh';
+    let lastResponse = null;
+
+    function t(key) {
+      return i18n[currentLang][key] || key;
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+      document.title = t('pageTitle');
+      document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach((el) => {
+        el.innerHTML = t(el.dataset.i18nHtml);
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+      });
+      document.querySelectorAll('[data-i18n-option]').forEach((el) => {
+        el.textContent = t(el.dataset.i18nOption);
+      });
+      document.querySelectorAll('[data-lang-button]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.langButton === currentLang);
+      });
+      if (lastResponse) {
+        renderCatalog(lastResponse);
+      } else {
+        const empty = document.getElementById('results-empty');
+        if (empty) empty.textContent = t('resultsEmpty');
+      }
+    }
 
     function renderCatalog(response) {
-      const items = (response.selection?.selected_items || []).map((item) => `
-        <div class="item">
-          <div><span class="chip">${item.category}</span></div>
-          <div>
-            <div>${item.display_name}</div>
-            <div class="muted mono">${(item.source_platforms || []).join(', ') || 'catalog'}${item.reasons?.length ? ' · ' + item.reasons[0] : ''}</div>
+      lastResponse = response;
+      const items = (response.selection?.selected_items || []).map((item) => {
+        const reasons = item.reasons?.length ? ' · ' + item.reasons[0] : '';
+        return `
+          <div class="item">
+            <div><span class="chip">${item.category}</span></div>
+            <div>
+              <div>${item.display_name}</div>
+              <div class="muted mono">${(item.source_platforms || []).join(', ') || t('platformFallback')}${reasons}</div>
+            </div>
+            <div class="price">¥${Math.round(item.selected_price || 0)}</div>
           </div>
-          <div class="price">¥${Math.round(item.selected_price || 0)}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       const warnings = ([...(response.catalog_warnings || []), ...((response.selection && response.selection.warnings) || [])])
         .map((w) => `<li class="warning">${w}</li>`)
-        .join('') || '<li>当前没有额外警告。</li>';
+        .join('') || `<li>${t('noWarnings')}</li>`;
 
-      const reasons = (response.advice?.reasons || []).map((item) => `<li>${item}</li>`).join('') || '<li>当前未返回推荐理由。</li>';
-      const alternatives = (response.advice?.alternative_note || '暂无。');
-      const upgrades = (response.advice?.upgrade_advice || []).join(' ') || '暂无。';
+      const reasons = (response.advice?.reasons || []).map((item) => `<li>${item}</li>`).join('') || `<li>${t('noReasons')}</li>`;
+      const alternatives = response.advice?.alternative_note || t('noAlternative');
+      const upgrades = (response.advice?.upgrade_advice || []).join(' ') || t('noUpgrade');
 
       results.innerHTML = `
         <div class="result-grid">
           <div class="panel card">
-            <h2>推荐结果</h2>
-            <p><strong>摘要：</strong>${response.advice?.summary || '当前未返回摘要。'}</p>
-            <p><strong>估算总价：</strong><span class="price">¥${Math.round(response.selection?.estimated_total || 0)}</span></p>
-            <p><strong>目录样本数：</strong>${response.catalog_item_count || 0}</p>
-            <div class="item-list">${items || '<div class="empty">当前没有返回选中的配件项。</div>'}</div>
+            <h2>${t('summaryTitle')}</h2>
+            <p><strong>${t('summaryLabel')}</strong>${response.advice?.summary || t('noSummary')}</p>
+            <p><strong>${t('totalLabel')}</strong><span class="price">¥${Math.round(response.selection?.estimated_total || 0)}</span></p>
+            <p><strong>${t('itemCountLabel')}</strong>${response.catalog_item_count || 0}</p>
+            <div class="item-list">${items || `<div class="empty">${t('selectedItemsEmpty')}</div>`}</div>
           </div>
           <div>
             <div class="panel card">
-              <h3>推荐理由</h3>
+              <h3>${t('reasonsTitle')}</h3>
               <ul class="advice-list">${reasons}</ul>
             </div>
             <div class="panel card">
-              <h3>Warnings</h3>
+              <h3>${t('warningsTitle')}</h3>
               <ul class="advice-list">${warnings}</ul>
             </div>
             <div class="panel card">
-              <h3>补充说明</h3>
-              <p><strong>Upgrade:</strong> ${upgrades}</p>
-              <p><strong>Alternative:</strong> ${alternatives}</p>
+              <h3>${t('notesTitle')}</h3>
+              <p><strong>${t('upgradeLabel')}</strong> ${upgrades}</p>
+              <p><strong>${t('alternativeLabel')}</strong> ${alternatives}</p>
             </div>
           </div>
         </div>
       `;
     }
 
+    document.querySelectorAll('[data-lang-button]').forEach((button) => {
+      button.addEventListener('click', () => {
+        currentLang = button.dataset.langButton;
+        localStorage.setItem('rigel_console_lang', currentLang);
+        applyLanguage();
+      });
+    });
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      results.innerHTML = '<div class="panel card">正在生成推荐，请稍等...</div>';
+      results.innerHTML = `<div class="panel card">${t('loading')}</div>`;
       const payload = {
         budget: Number(document.getElementById('budget').value),
         use_case: document.getElementById('use_case').value,
@@ -382,12 +590,14 @@
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'request failed');
+        if (!res.ok) throw new Error(data.error || t('requestFailed'));
         renderCatalog(data);
       } catch (error) {
         results.innerHTML = `<div class="panel card warning">${error.message}</div>`;
       }
     });
+
+    applyLanguage();
   </script>
 </body>
 </html>

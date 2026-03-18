@@ -2,11 +2,16 @@
 
 `rigel-console` 是当前系统的最小前端与 API 入口。
 
+当前对外站点域名规划：
+
+- `givezj8.cn`
+
 ## 当前职责
 
 - 接收用户输入
 - 调用 `rigel-build-engine`
 - 展示推荐结果
+- 提供中英文切换页面体验
 
 ## 不负责什么
 
@@ -41,6 +46,12 @@
 - `GET /keywords/new`
 - `GET /keywords/{id}/edit`
 - `GET /keywords/import`
+
+## 当前页面要求
+
+- 页面文案支持中文 / English 切换
+- 语言切换优先使用前端本地状态持久化
+- 不要求额外的后端国际化接口
 
 ## 当前目标
 
