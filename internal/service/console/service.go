@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rigel-labs/rigel-console/internal/domain/model"
@@ -22,186 +23,116 @@ import (
 type BuildEngineClient interface {
 	GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error)
 	GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error)
+	RecommendBuild(ctx context.Context, req model.GenerateBuildRequest) (model.CatalogRecommendationResponse, error)
+	GetSystemSettings(ctx context.Context) (model.SystemSettingsResponse, error)
+	UpdateSystemSettings(ctx context.Context, req model.UpdateSystemSettingsRequest) (model.SystemSettingsResponse, error)
 }
 
-type JDCollectorClient interface {
-	GetScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error)
-	UpdateScheduleConfig(ctx context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error)
+type cachedRecommendation struct {
+	response  model.CatalogRecommendationResponse
+	expiresAt time.Time
 }
 
-type RequestMeta struct {
-	ClientIP          string
-	DeviceFingerprint string
-	AnonymousID       string
-}
-
-type Option func(*Service)
-
-func WithStore(store securityStore) Option {
-	return func(s *Service) {
-		if store != nil {
-			s.store = store
-		}
-	}
-}
-
-func WithChallengeVerifier(verifier challengeVerifier) Option {
-	return func(s *Service) {
-		if verifier != nil {
-			s.challengeVerifier = verifier
-		}
-	}
-}
-
-func WithLimits(ipHourlyLimit, deviceHourlyLimit int) Option {
-	return func(s *Service) {
-		if ipHourlyLimit > 0 {
-			s.ipHourlyLimit = ipHourlyLimit
-		}
-		if deviceHourlyLimit > 0 {
-			s.deviceHourlyLimit = deviceHourlyLimit
-		}
-	}
-}
-
-func WithChallengePassTTL(ttl time.Duration) Option {
-	return func(s *Service) {
-		if ttl > 0 {
-			s.challengePassTTL = ttl
-		}
-	}
-}
-
-func WithSessionTTL(ttl time.Duration) Option {
-	return func(s *Service) {
-		if ttl > 0 {
-			s.sessionTTL = ttl
-		}
-	}
-}
-
-func WithKeywordSeedRepository(repo KeywordSeedRepository) Option {
-	return func(s *Service) {
-		if repo != nil {
-			s.keywordSeeds = repo
-		}
-	}
-}
-
-func WithAdminPasswordHash(hash string) Option {
-	return func(s *Service) {
-		hash = strings.TrimSpace(hash)
-		if hash != "" {
-			s.adminPasswordHash = []byte(hash)
-		}
-	}
+type sessionUsage struct {
+	WindowStarted time.Time
+	Used          int
+	CooldownUntil time.Time
 }
 
 type Service struct {
-	buildClient       BuildEngineClient
-	jdCollector       JDCollectorClient
-	adminUsername     string
-	adminPasswordHash []byte
-	anonymousLimit    int
-	ipHourlyLimit     int
-	deviceHourlyLimit int
-	cooldownDuration  time.Duration
-	cacheTTL          time.Duration
-	challengePassTTL  time.Duration
-	sessionTTL        time.Duration
-	store             securityStore
-	challengeVerifier challengeVerifier
-	keywordSeeds      KeywordSeedRepository
+	buildClient      BuildEngineClient
+	adminUsername    string
+	adminPassword    string
+	anonymousLimit   int
+	cooldownDuration time.Duration
+	cacheTTL         time.Duration
+
+	mu             sync.Mutex
+	seedSeq        int
+	seeds          map[string]model.KeywordSeed
+	recommendCache map[string]cachedRecommendation
+	anonymousUsage map[string]sessionUsage
 }
 
-func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration, opts ...Option) *Service {
+func New(buildClient BuildEngineClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration) *Service {
+	if adminUsername == "" {
+		adminUsername = "admin"
+	}
+	if adminPassword == "" {
+		adminPassword = "admin123456"
+	}
 	if anonymousLimit <= 0 {
 		anonymousLimit = 5
 	}
 	if cooldownDuration <= 0 {
 		cooldownDuration = time.Minute
 	}
-	var adminPasswordHash []byte
-	if strings.TrimSpace(adminPassword) != "" {
-		var err error
-		adminPasswordHash, err = hashAdminPassword(adminPassword)
-		if err != nil {
-			panic(fmt.Sprintf("hash admin password: %v", err))
-		}
+
+	now := time.Now().UTC()
+	initialSeeds := []model.KeywordSeed{
+		newSeed("seed-1", "cpu", "Ryzen 5 7500F", "Ryzen 5 7500F", "AMD", []string{"7500F", "AMD 7500F"}, 100, true, "主流游戏 CPU", now),
+		newSeed("seed-2", "gpu", "RTX 4060", "RTX 4060", "NVIDIA", []string{"4060", "RTX4060"}, 100, true, "1080p 主流显卡", now),
+		newSeed("seed-3", "motherboard", "B650M", "B650M", "", []string{"B650", "AMD B650M"}, 90, true, "AM5 主流主板", now),
+	}
+	seeds := make(map[string]model.KeywordSeed, len(initialSeeds))
+	for _, seed := range initialSeeds {
+		seeds[seed.ID] = seed
 	}
 
-	service := &Service{
-		buildClient:       buildClient,
-		jdCollector:       jdCollector,
-		adminUsername:     adminUsername,
-		adminPasswordHash: adminPasswordHash,
-		anonymousLimit:    anonymousLimit,
-		ipHourlyLimit:     max(anonymousLimit*4, 20),
-		deviceHourlyLimit: max(anonymousLimit*2, 12),
-		cooldownDuration:  cooldownDuration,
-		cacheTTL:          10 * time.Minute,
-		challengePassTTL:  15 * time.Minute,
-		sessionTTL:        30 * 24 * time.Hour,
-		store:             newMemorySecurityStore(),
-		challengeVerifier: noopChallengeVerifier{},
+	return &Service{
+		buildClient:      buildClient,
+		adminUsername:    adminUsername,
+		adminPassword:    adminPassword,
+		anonymousLimit:   anonymousLimit,
+		cooldownDuration: cooldownDuration,
+		cacheTTL:         10 * time.Minute,
+		seedSeq:          len(initialSeeds),
+		seeds:            seeds,
+		recommendCache:   make(map[string]cachedRecommendation),
+		anonymousUsage:   make(map[string]sessionUsage),
 	}
-
-	for _, opt := range opts {
-		opt(service)
-	}
-	if len(service.adminPasswordHash) == 0 {
-		panic("admin password hash is not configured")
-	}
-	return service
 }
 
-func (s *Service) GetCollectorScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error) {
-	if s.jdCollector == nil {
-		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
+func newSeed(id, category, keyword, canonicalModel, brand string, aliases []string, priority int, enabled bool, notes string, now time.Time) model.KeywordSeed {
+	return model.KeywordSeed{
+		ID:             id,
+		Category:       category,
+		Keyword:        keyword,
+		CanonicalModel: canonicalModel,
+		Brand:          brand,
+		Aliases:        aliases,
+		Priority:       priority,
+		Enabled:        enabled,
+		Notes:          notes,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
-	return s.jdCollector.GetScheduleConfig(ctx)
 }
 
-func (s *Service) UpdateCollectorScheduleConfig(ctx context.Context, req model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
-	if s.jdCollector == nil {
-		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
-	}
-	return s.jdCollector.UpdateScheduleConfig(ctx, req)
-}
+func (s *Service) IssueAnonymousSession(anonymousID string) model.AnonymousSessionResponse {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *Service) IssueAnonymousSession(ctx context.Context, meta RequestMeta) (model.AnonymousSessionResponse, error) {
-	anonymousID := strings.TrimSpace(meta.AnonymousID)
 	if anonymousID == "" {
 		anonymousID = "anon_" + randomToken(12)
 	}
-	meta.AnonymousID = anonymousID
 
-	sessionUsage, _, err := s.loadUsage(ctx, "session", anonymousID)
-	if err != nil {
-		return model.AnonymousSessionResponse{}, err
-	}
-	challengePassed, err := s.hasChallengePass(ctx, meta)
-	if err != nil {
-		return model.AnonymousSessionResponse{}, err
-	}
-	riskLevel := s.evaluateRiskLevel(meta)
-	challengeRequired := !challengePassed && s.challengeVerifier.Available() && riskLevel == riskLevelElevated
-
+	status := s.currentUsageLocked(anonymousID)
 	return model.AnonymousSessionResponse{
-		AnonymousID:             anonymousID,
-		CooldownSeconds:         cooldownSeconds(sessionUsage.CooldownUntil),
-		RemainingAIRequests:     max(0, s.anonymousLimit-sessionUsage.Used),
-		ChallengeRequired:       challengeRequired,
-		ChallengePassed:         challengePassed,
-		RiskLevel:               riskLevel,
-		SessionExpiresInSeconds: int(s.sessionTTL.Seconds()),
-	}, nil
+		AnonymousID:         anonymousID,
+		CooldownSeconds:     cooldownSeconds(status.CooldownUntil),
+		RemainingAIRequests: max(0, s.anonymousLimit-status.Used),
+		ChallengeRequired:   false,
+	}
 }
 
-func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, meta RequestMeta) (model.CatalogRecommendationResponse, error) {
-	meta.AnonymousID = strings.TrimSpace(meta.AnonymousID)
-	if meta.AnonymousID == "" {
-		meta.AnonymousID = "anon_" + randomToken(12)
+func (s *Service) AuthenticateAdmin(username, password string) bool {
+	return username == s.adminUsername && password == s.adminPassword
+}
+
+func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, anonymousID string) (model.CatalogRecommendationResponse, error) {
+	if anonymousID == "" {
+		anonymousID = "anon_" + randomToken(12)
 	}
 
 	key, err := recommendationKey(req)
@@ -209,144 +140,212 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 		return model.CatalogRecommendationResponse{}, err
 	}
 
-	riskLevel := s.evaluateRiskLevel(meta)
-	sessionUsage, sessionExists, err := s.loadUsage(ctx, "session", meta.AnonymousID)
-	if err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
-	ipUsage, ipExists, err := s.loadUsage(ctx, "ip", meta.ClientIP)
-	if err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
-	deviceUsage, deviceExists, err := s.loadUsage(ctx, "device", s.deviceKey(meta.DeviceFingerprint))
-	if err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
-	challengePassed, err := s.hasChallengePass(ctx, meta)
-	if err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
+	now := time.Now()
 
-	if blocked := firstCooldown(sessionUsage, ipUsage, deviceUsage); !blocked.IsZero() {
+	s.mu.Lock()
+	usage := s.currentUsageLocked(anonymousID)
+	if usage.CooldownUntil.After(now) {
+		s.mu.Unlock()
 		return model.CatalogRecommendationResponse{
-			RequestStatus: s.requestStatus(false, sessionUsage, blocked, challengePassed, riskLevel),
-		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(blocked)}
+			RequestStatus: model.RequestStatus{
+				CacheHit:            false,
+				RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
+				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
+			},
+		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
 	}
-
-	if cached, ok, err := s.store.LoadRecommendation(ctx, key); err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	} else if ok && cached.ExpiresAt.After(time.Now()) {
-		response := cached.Response
-		response.RequestStatus = s.requestStatus(true, sessionUsage, time.Time{}, challengePassed, riskLevel)
+	if cached, ok := s.recommendCache[key]; ok && cached.expiresAt.After(now) {
+		response := cached.response
+		response.RequestStatus = model.RequestStatus{
+			CacheHit:            true,
+			RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
+			CooldownSeconds:     0,
+		}
+		s.mu.Unlock()
 		return response, nil
 	}
-
-	requiresChallenge := !challengePassed && riskLevel == riskLevelElevated && s.challengeVerifier.Available()
-	if requiresChallenge {
+	if usage.Used >= s.anonymousLimit {
+		usage.CooldownUntil = now.Add(s.cooldownDuration)
+		s.anonymousUsage[anonymousID] = usage
+		s.mu.Unlock()
 		return model.CatalogRecommendationResponse{
-			RequestStatus: s.requestStatus(false, sessionUsage, time.Time{}, false, riskLevel),
-		}, ErrChallengeRequired{RiskLevel: riskLevel}
+			RequestStatus: model.RequestStatus{
+				CacheHit:            false,
+				RemainingAIRequests: 0,
+				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
+			},
+		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
 	}
+	usage.Used++
+	s.anonymousUsage[anonymousID] = usage
+	remaining := max(0, s.anonymousLimit-usage.Used)
+	s.mu.Unlock()
 
-	now := time.Now()
-	sessionUsage = ensureUsageWindow(sessionUsage, sessionExists, now)
-	ipUsage = ensureUsageWindow(ipUsage, ipExists, now)
-	deviceUsage = ensureUsageWindow(deviceUsage, deviceExists, now)
-
-	if sessionUsage.Used >= s.anonymousLimit || ipUsage.Used >= s.ipHourlyLimit || deviceUsage.Used >= s.deviceHourlyLimit {
-		cooldownUntil := now.Add(s.cooldownDuration)
-		sessionUsage.CooldownUntil = maxTime(sessionUsage.CooldownUntil, cooldownUntil)
-		ipUsage.CooldownUntil = maxTime(ipUsage.CooldownUntil, cooldownUntil)
-		deviceUsage.CooldownUntil = maxTime(deviceUsage.CooldownUntil, cooldownUntil)
-		if err := s.saveUsageTriplet(ctx, meta, sessionUsage, ipUsage, deviceUsage); err != nil {
-			return model.CatalogRecommendationResponse{}, err
-		}
-		return model.CatalogRecommendationResponse{
-			RequestStatus: s.requestStatus(false, sessionUsage, cooldownUntil, challengePassed, riskLevel),
-		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(cooldownUntil)}
-	}
-
-	sessionUsage.Used++
-	ipUsage.Used++
-	deviceUsage.Used++
-	if err := s.saveUsageTriplet(ctx, meta, sessionUsage, ipUsage, deviceUsage); err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
-
-	catalog, err := s.buildClient.GetPriceCatalog(ctx, req)
+	recommendation, err := s.buildClient.RecommendBuild(ctx, req)
 	if err != nil {
 		return model.CatalogRecommendationResponse{}, err
 	}
-	advice, err := s.buildClient.GenerateCatalogAdvice(ctx, req, catalog)
-	if err != nil {
-		return model.CatalogRecommendationResponse{}, err
+	response := recommendation
+	response.RequestStatus = model.RequestStatus{
+		CacheHit:            false,
+		RemainingAIRequests: remaining,
+		CooldownSeconds:     0,
 	}
 
-	response := model.CatalogRecommendationResponse{
-		RequestStatus:    s.requestStatus(false, sessionUsage, time.Time{}, challengePassed, riskLevel),
-		CatalogItemCount: len(catalog.Items),
-		CatalogWarnings:  catalog.Warnings,
-		Selection:        advice.Selection,
-		Advice:           &advice.Advisory,
-	}
-	response.RequestStatus.RemainingAIRequests = max(0, s.anonymousLimit-sessionUsage.Used)
-
-	if err := s.store.SaveRecommendation(ctx, key, storedRecommendation{
-		Response:  response,
-		ExpiresAt: now.Add(s.cacheTTL),
-	}, s.cacheTTL); err != nil {
-		return model.CatalogRecommendationResponse{}, err
-	}
+	s.mu.Lock()
+	s.recommendCache[key] = cachedRecommendation{response: response, expiresAt: now.Add(s.cacheTTL)}
+	s.mu.Unlock()
 	return response, nil
 }
 
-func (s *Service) ListKeywordSeeds(ctx context.Context, filter model.KeywordSeedFilter) (model.KeywordSeedListResponse, error) {
-	if s.keywordSeeds == nil {
-		return model.KeywordSeedListResponse{}, fmt.Errorf("keyword seed repository is not configured")
-	}
-	return s.keywordSeeds.ListKeywordSeeds(ctx, filter)
+func (s *Service) GetSystemSettings(ctx context.Context) (model.SystemSettingsResponse, error) {
+	return s.buildClient.GetSystemSettings(ctx)
 }
 
-func (s *Service) GetKeywordSeed(ctx context.Context, id string) (model.KeywordSeed, bool, error) {
-	if s.keywordSeeds == nil {
-		return model.KeywordSeed{}, false, fmt.Errorf("keyword seed repository is not configured")
-	}
-	return s.keywordSeeds.GetKeywordSeed(ctx, id)
+func (s *Service) UpdateSystemSettings(ctx context.Context, req model.UpdateSystemSettingsRequest) (model.SystemSettingsResponse, error) {
+	return s.buildClient.UpdateSystemSettings(ctx, req)
 }
 
-func (s *Service) CreateKeywordSeed(ctx context.Context, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) ListKeywordSeeds(filter model.KeywordSeedFilter) model.KeywordSeedListResponse {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	page := filter.Page
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := filter.PageSize
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	items := make([]model.KeywordSeed, 0, len(s.seeds))
+	for _, item := range s.seeds {
+		if filter.Category != "" && !strings.EqualFold(item.Category, filter.Category) {
+			continue
+		}
+		if filter.Brand != "" && !strings.Contains(strings.ToLower(item.Brand), strings.ToLower(filter.Brand)) {
+			continue
+		}
+		if filter.Keyword != "" {
+			text := strings.ToLower(item.Keyword + " " + item.CanonicalModel + " " + strings.Join(item.Aliases, " "))
+			if !strings.Contains(text, strings.ToLower(filter.Keyword)) {
+				continue
+			}
+		}
+		if filter.Enabled != nil && item.Enabled != *filter.Enabled {
+			continue
+		}
+		items = append(items, item)
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Priority != items[j].Priority {
+			return items[i].Priority > items[j].Priority
+		}
+		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+	})
+
+	total := len(items)
+	start := (page - 1) * pageSize
+	if start > total {
+		start = total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+
+	return model.KeywordSeedListResponse{
+		Items:    append([]model.KeywordSeed(nil), items[start:end]...),
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
+	}
+}
+
+func (s *Service) GetKeywordSeed(id string) (model.KeywordSeed, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	item, ok := s.seeds[id]
+	return item, ok
+}
+
+func (s *Service) CreateKeywordSeed(req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
-	if s.keywordSeeds == nil {
-		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now().UTC()
+	s.seedSeq++
+	id := fmt.Sprintf("seed-%d", s.seedSeq)
+	seed := model.KeywordSeed{
+		ID:             id,
+		Category:       strings.ToLower(strings.TrimSpace(req.Category)),
+		Keyword:        strings.TrimSpace(req.Keyword),
+		CanonicalModel: strings.TrimSpace(req.CanonicalModel),
+		Brand:          strings.TrimSpace(req.Brand),
+		Aliases:        normalizeAliases(req.Aliases),
+		Priority:       normalizePriority(req.Priority),
+		Enabled:        req.Enabled,
+		Notes:          strings.TrimSpace(req.Notes),
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
-	return s.keywordSeeds.CreateKeywordSeed(ctx, req)
+	s.seeds[id] = seed
+	return seed, nil
 }
 
-func (s *Service) UpdateKeywordSeed(ctx context.Context, id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) UpdateKeywordSeed(id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
-	if s.keywordSeeds == nil {
-		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	existing, ok := s.seeds[id]
+	if !ok {
+		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
 	}
-	return s.keywordSeeds.UpdateKeywordSeed(ctx, id, req)
+	existing.Category = strings.ToLower(strings.TrimSpace(req.Category))
+	existing.Keyword = strings.TrimSpace(req.Keyword)
+	existing.CanonicalModel = strings.TrimSpace(req.CanonicalModel)
+	existing.Brand = strings.TrimSpace(req.Brand)
+	existing.Aliases = normalizeAliases(req.Aliases)
+	existing.Priority = normalizePriority(req.Priority)
+	existing.Enabled = req.Enabled
+	existing.Notes = strings.TrimSpace(req.Notes)
+	existing.UpdatedAt = time.Now().UTC()
+	s.seeds[id] = existing
+	return existing, nil
 }
 
-func (s *Service) SetKeywordSeedEnabled(ctx context.Context, id string, enabled bool) (model.KeywordSeed, error) {
-	if s.keywordSeeds == nil {
-		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
+func (s *Service) SetKeywordSeedEnabled(id string, enabled bool) (model.KeywordSeed, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	item, ok := s.seeds[id]
+	if !ok {
+		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
 	}
-	return s.keywordSeeds.SetKeywordSeedEnabled(ctx, id, enabled)
+	item.Enabled = enabled
+	item.UpdatedAt = time.Now().UTC()
+	s.seeds[id] = item
+	return item, nil
 }
 
-func (s *Service) ExportKeywordSeedsExcel(ctx context.Context) ([]byte, error) {
-	list, err := s.ListKeywordSeeds(ctx, model.KeywordSeedFilter{Page: 1, PageSize: 10000})
-	if err != nil {
-		return nil, err
+func (s *Service) ExportKeywordSeedsExcel() ([]byte, error) {
+	s.mu.Lock()
+	items := make([]model.KeywordSeed, 0, len(s.seeds))
+	for _, item := range s.seeds {
+		items = append(items, item)
 	}
-	items := append([]model.KeywordSeed(nil), list.Items...)
+	s.mu.Unlock()
+
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	f := excelize.NewFile()
 	sheet := f.GetSheetName(0)
@@ -400,15 +399,15 @@ func (s *Service) TemplateWorkbook() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *Service) ImportKeywordSeeds(ctx context.Context, file multipart.File) (model.KeywordSeedImportResponse, error) {
+func (s *Service) ImportKeywordSeeds(file multipart.File) (model.KeywordSeedImportResponse, error) {
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return model.KeywordSeedImportResponse{}, fmt.Errorf("read upload: %w", err)
 	}
-	return s.importWorkbookBytes(ctx, content)
+	return s.importWorkbookBytes(content)
 }
 
-func (s *Service) importWorkbookBytes(ctx context.Context, content []byte) (model.KeywordSeedImportResponse, error) {
+func (s *Service) importWorkbookBytes(content []byte) (model.KeywordSeedImportResponse, error) {
 	workbook, err := excelize.OpenReader(bytes.NewReader(content))
 	if err != nil {
 		return model.KeywordSeedImportResponse{}, fmt.Errorf("open workbook: %w", err)
@@ -444,7 +443,7 @@ func (s *Service) importWorkbookBytes(ctx context.Context, content []byte) (mode
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue
 		}
-		if _, err := s.CreateKeywordSeed(ctx, req); err != nil {
+		if _, err := s.CreateKeywordSeed(req); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue
@@ -595,27 +594,15 @@ func cooldownSeconds(until time.Time) int {
 	return seconds
 }
 
-const (
-	riskLevelNormal   = "normal"
-	riskLevelElevated = "elevated"
-	usageTTL          = 2 * time.Hour
-)
-
-func (s *Service) VerifyChallenge(ctx context.Context, meta RequestMeta, token string) (model.ChallengeVerifyResponse, error) {
-	if !s.challengeVerifier.Available() {
-		return model.ChallengeVerifyResponse{}, fmt.Errorf("challenge verifier is not configured")
+func (s *Service) currentUsageLocked(anonymousID string) sessionUsage {
+	now := time.Now()
+	usage, ok := s.anonymousUsage[anonymousID]
+	if !ok || now.Sub(usage.WindowStarted) >= time.Hour {
+		usage = sessionUsage{WindowStarted: now}
+		s.anonymousUsage[anonymousID] = usage
+		return usage
 	}
-	if err := s.challengeVerifier.Verify(ctx, token, meta.ClientIP); err != nil {
-		return model.ChallengeVerifyResponse{}, err
-	}
-	if err := s.markChallengePass(ctx, meta); err != nil {
-		return model.ChallengeVerifyResponse{}, err
-	}
-	return model.ChallengeVerifyResponse{
-		Verified:             true,
-		PassExpiresInSeconds: int(s.challengePassTTL.Seconds()),
-		RiskLevel:            riskLevelNormal,
-	}, nil
+	return usage
 }
 
 type ErrRateLimited struct {
@@ -624,14 +611,6 @@ type ErrRateLimited struct {
 
 func (e ErrRateLimited) Error() string {
 	return "rate limited"
-}
-
-type ErrChallengeRequired struct {
-	RiskLevel string
-}
-
-func (e ErrChallengeRequired) Error() string {
-	return "challenge required"
 }
 
 type ErrNotFound struct {
@@ -650,116 +629,4 @@ func max(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func firstCooldown(states ...usageState) time.Time {
-	for _, state := range states {
-		if state.CooldownUntil.After(time.Now()) {
-			return state.CooldownUntil
-		}
-	}
-	return time.Time{}
-}
-
-func ensureUsageWindow(usage usageState, exists bool, now time.Time) usageState {
-	if !exists || now.Sub(usage.WindowStarted) >= time.Hour {
-		return usageState{WindowStarted: now}
-	}
-	return usage
-}
-
-func (s *Service) requestStatus(cacheHit bool, session usageState, cooldownUntil time.Time, challengePassed bool, riskLevel string) model.RequestStatus {
-	return model.RequestStatus{
-		CacheHit:            cacheHit,
-		RemainingAIRequests: max(0, s.anonymousLimit-session.Used),
-		CooldownSeconds:     cooldownSeconds(cooldownUntil),
-		ChallengeRequired:   !challengePassed && riskLevel == riskLevelElevated && s.challengeVerifier.Available(),
-		ChallengePassed:     challengePassed,
-		RiskLevel:           riskLevel,
-	}
-}
-
-func (s *Service) evaluateRiskLevel(meta RequestMeta) string {
-	if strings.TrimSpace(meta.DeviceFingerprint) == "" {
-		return riskLevelElevated
-	}
-	return riskLevelNormal
-}
-
-func (s *Service) loadUsage(ctx context.Context, scope, key string) (usageState, bool, error) {
-	if strings.TrimSpace(key) == "" {
-		return usageState{}, false, nil
-	}
-	return s.store.LoadUsage(ctx, scope, key)
-}
-
-func (s *Service) saveUsageTriplet(ctx context.Context, meta RequestMeta, session usageState, ip usageState, device usageState) error {
-	if err := s.store.SaveUsage(ctx, "session", meta.AnonymousID, session, usageTTL); err != nil {
-		return err
-	}
-	if strings.TrimSpace(meta.ClientIP) != "" {
-		if err := s.store.SaveUsage(ctx, "ip", meta.ClientIP, ip, usageTTL); err != nil {
-			return err
-		}
-	}
-	if err := s.store.SaveUsage(ctx, "device", s.deviceKey(meta.DeviceFingerprint), device, usageTTL); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Service) hasChallengePass(ctx context.Context, meta RequestMeta) (bool, error) {
-	keys := []string{
-		"session:" + meta.AnonymousID,
-		"ip:" + strings.TrimSpace(meta.ClientIP),
-		"device:" + s.deviceKey(meta.DeviceFingerprint),
-	}
-	for _, key := range keys {
-		if strings.HasSuffix(key, ":") {
-			continue
-		}
-		ok, err := s.store.HasChallengePass(ctx, key)
-		if err != nil {
-			return false, err
-		}
-		if ok {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (s *Service) markChallengePass(ctx context.Context, meta RequestMeta) error {
-	keys := []string{
-		"session:" + meta.AnonymousID,
-		"ip:" + strings.TrimSpace(meta.ClientIP),
-		"device:" + s.deviceKey(meta.DeviceFingerprint),
-	}
-	for _, key := range keys {
-		if strings.HasSuffix(key, ":") {
-			continue
-		}
-		if err := s.store.SetChallengePass(ctx, key, s.challengePassTTL); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Service) deviceKey(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "missing"
-	}
-	return value
-}
-
-func maxTime(values ...time.Time) time.Time {
-	var current time.Time
-	for _, value := range values {
-		if value.After(current) {
-			current = value
-		}
-	}
-	return current
 }

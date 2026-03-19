@@ -3,10 +3,6 @@ package console
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"sort"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,92 +11,6 @@ import (
 )
 
 type buildClientStub struct{}
-type jdCollectorClientStub struct{}
-type keywordSeedRepoStub struct {
-	mu    sync.Mutex
-	seq   int
-	items map[string]model.KeywordSeed
-}
-
-func newKeywordSeedRepoStub() *keywordSeedRepoStub {
-	return &keywordSeedRepoStub{
-		items: map[string]model.KeywordSeed{
-			"seed-1": {ID: "seed-1", Category: "cpu", Keyword: "Ryzen 5 7500F", CanonicalModel: "Ryzen 5 7500F", Brand: "AMD", Aliases: []string{"7500F"}, Priority: 100, Enabled: true},
-			"seed-2": {ID: "seed-2", Category: "gpu", Keyword: "RTX 4060", CanonicalModel: "RTX 4060", Brand: "NVIDIA", Aliases: []string{"4060"}, Priority: 100, Enabled: true},
-		},
-		seq: 2,
-	}
-}
-
-func (r *keywordSeedRepoStub) ListKeywordSeeds(_ context.Context, filter model.KeywordSeedFilter) (model.KeywordSeedListResponse, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	items := make([]model.KeywordSeed, 0, len(r.items))
-	for _, item := range r.items {
-		if filter.Category != "" && !strings.EqualFold(filter.Category, item.Category) {
-			continue
-		}
-		items = append(items, item)
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
-	page := filter.Page
-	if page <= 0 {
-		page = 1
-	}
-	pageSize := filter.PageSize
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-	return model.KeywordSeedListResponse{Items: items, Page: page, PageSize: pageSize, Total: len(items)}, nil
-}
-
-func (r *keywordSeedRepoStub) GetKeywordSeed(_ context.Context, id string) (model.KeywordSeed, bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.items[id]
-	return item, ok, nil
-}
-
-func (r *keywordSeedRepoStub) CreateKeywordSeed(_ context.Context, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.seq++
-	id := fmt.Sprintf("seed-%d", r.seq)
-	item := model.KeywordSeed{ID: id, Category: req.Category, Keyword: req.Keyword, CanonicalModel: req.CanonicalModel, Brand: req.Brand, Aliases: req.Aliases, Priority: req.Priority, Enabled: req.Enabled, Notes: req.Notes}
-	r.items[id] = item
-	return item, nil
-}
-
-func (r *keywordSeedRepoStub) UpdateKeywordSeed(_ context.Context, id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.items[id]
-	if !ok {
-		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
-	}
-	item.Category = req.Category
-	item.Keyword = req.Keyword
-	item.CanonicalModel = req.CanonicalModel
-	item.Brand = req.Brand
-	item.Aliases = req.Aliases
-	item.Priority = req.Priority
-	item.Enabled = req.Enabled
-	item.Notes = req.Notes
-	r.items[id] = item
-	return item, nil
-}
-
-func (r *keywordSeedRepoStub) SetKeywordSeedEnabled(_ context.Context, id string, enabled bool) (model.KeywordSeed, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.items[id]
-	if !ok {
-		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
-	}
-	item.Enabled = enabled
-	r.items[id] = item
-	return item, nil
-}
 
 func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	return model.BuildEnginePriceCatalog{
@@ -129,44 +39,44 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 	}, nil
 }
 
-func (jdCollectorClientStub) GetScheduleConfig(context.Context) (model.CollectorScheduleResponse, error) {
-	return model.CollectorScheduleResponse{
-		Configured: true,
-		Config: model.CollectorScheduleConfig{
-			ID:                     "cfg-1",
-			ServiceName:            "rigel-jd-collector",
-			Enabled:                true,
-			ScheduleTime:           "03:00",
-			RequestIntervalSeconds: 5,
-			QueryLimit:             10,
+func (buildClientStub) RecommendBuild(context.Context, model.GenerateBuildRequest) (model.CatalogRecommendationResponse, error) {
+	return model.CatalogRecommendationResponse{
+		Provider:       "build-engine",
+		FallbackUsed:   true,
+		Summary:        "目录推荐说明",
+		EstimatedTotal: 3298,
+		WithinBudget:   true,
+		BuildItems: []model.BuildRecommendationItem{
+			{Category: "CPU", TargetModel: "Ryzen 5 7500F", RecommendedProduct: &model.BuildProductRef{DisplayName: "Ryzen 5 7500F", Price: 899}},
+			{Category: "GPU", TargetModel: "RTX 4060", RecommendedProduct: &model.BuildProductRef{DisplayName: "RTX 4060", Price: 2399}},
 		},
+		Advice: model.BuildAdvice{Reasons: []string{"价格目录已聚合"}},
 	}, nil
 }
 
-func (jdCollectorClientStub) UpdateScheduleConfig(_ context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
-	return model.CollectorScheduleResponse{
-		Configured: true,
-		Config: model.CollectorScheduleConfig{
-			ID:                     "cfg-1",
-			ServiceName:            "rigel-jd-collector",
-			Enabled:                payload.Enabled,
-			ScheduleTime:           payload.ScheduleTime,
-			RequestIntervalSeconds: payload.RequestIntervalSeconds,
-			QueryLimit:             payload.QueryLimit,
-		},
-	}, nil
+func (buildClientStub) GetSystemSettings(context.Context) (model.SystemSettingsResponse, error) {
+	var resp model.SystemSettingsResponse
+	resp.AIRuntime.Model = "openai/gpt-5.4-nano"
+	resp.CatalogAILimits.MaxModelsPerCategory = 5
+	return resp, nil
+}
+
+func (buildClientStub) UpdateSystemSettings(context.Context, model.UpdateSystemSettingsRequest) (model.SystemSettingsResponse, error) {
+	var resp model.SystemSettingsResponse
+	resp.AIRuntime.Model = "openai/gpt-5.4-nano"
+	resp.CatalogAILimits.MaxModelsPerCategory = 6
+	return resp, nil
 }
 
 func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
-	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute, WithKeywordSeedRepository(newKeywordSeedRepoStub()))
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
 	req := model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}
-	meta := RequestMeta{AnonymousID: "anon-1", ClientIP: "10.0.0.8", DeviceFingerprint: "fp-1"}
 
-	first, err := service.GenerateCatalogRecommendation(context.Background(), req, meta)
+	first, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() first error = %v", err)
 	}
-	second, err := service.GenerateCatalogRecommendation(context.Background(), req, meta)
+	second, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() second error = %v", err)
 	}
@@ -178,29 +88,9 @@ func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 	}
 }
 
-func TestGenerateCatalogRecommendationRequiresChallengeWithoutFingerprint(t *testing.T) {
-	service := New(
-		buildClientStub{},
-		jdCollectorClientStub{},
-		"admin",
-		"secret",
-		2,
-		time.Minute,
-		WithKeywordSeedRepository(newKeywordSeedRepoStub()),
-		WithChallengeVerifier(NewChallengeVerifier("", "", "")),
-	)
-	_, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}, RequestMeta{
-		AnonymousID: "anon-risk",
-		ClientIP:    "10.0.0.8",
-	})
-	if err != nil {
-		t.Fatalf("expected fallback to no challenge when verifier is unavailable, got %v", err)
-	}
-}
-
 func TestKeywordSeedCRUD(t *testing.T) {
-	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute, WithKeywordSeedRepository(newKeywordSeedRepoStub()))
-	item, err := service.CreateKeywordSeed(context.Background(), model.KeywordSeedUpsertRequest{
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	item, err := service.CreateKeywordSeed(model.KeywordSeedUpsertRequest{
 		Category:       "cpu",
 		Keyword:        "Ryzen 7 7700",
 		CanonicalModel: "Ryzen 7 7700",
@@ -212,7 +102,7 @@ func TestKeywordSeedCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKeywordSeed() error = %v", err)
 	}
-	updated, err := service.UpdateKeywordSeed(context.Background(), item.ID, model.KeywordSeedUpsertRequest{
+	updated, err := service.UpdateKeywordSeed(item.ID, model.KeywordSeedUpsertRequest{
 		Category:       "cpu",
 		Keyword:        "Ryzen 7 7700",
 		CanonicalModel: "Ryzen 7 7700",
@@ -231,7 +121,7 @@ func TestKeywordSeedCRUD(t *testing.T) {
 }
 
 func TestImportKeywordSeeds(t *testing.T) {
-	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute, WithKeywordSeedRepository(newKeywordSeedRepoStub()))
+	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
 	file := excelize.NewFile()
 	sheet := file.GetSheetName(0)
 	rows := [][]any{
@@ -249,36 +139,12 @@ func TestImportKeywordSeeds(t *testing.T) {
 		t.Fatalf("WriteToBuffer() error = %v", err)
 	}
 
-	result, err := service.ImportKeywordSeeds(context.Background(), ioNopCloser{Reader: bytes.NewReader(buf.Bytes())})
+	result, err := service.ImportKeywordSeeds(ioNopCloser{Reader: bytes.NewReader(buf.Bytes())})
 	if err != nil {
 		t.Fatalf("ImportKeywordSeeds() error = %v", err)
 	}
 	if result.ImportedCount != 1 {
 		t.Fatalf("expected imported count 1, got %d", result.ImportedCount)
-	}
-}
-
-func TestCollectorScheduleProxy(t *testing.T) {
-	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute, WithKeywordSeedRepository(newKeywordSeedRepoStub()))
-	cfg, err := service.GetCollectorScheduleConfig(context.Background())
-	if err != nil {
-		t.Fatalf("GetCollectorScheduleConfig() error = %v", err)
-	}
-	if !cfg.Configured || cfg.Config.ServiceName != "rigel-jd-collector" {
-		t.Fatalf("unexpected schedule config: %+v", cfg)
-	}
-
-	updated, err := service.UpdateCollectorScheduleConfig(context.Background(), model.CollectorScheduleUpsertRequest{
-		Enabled:                false,
-		ScheduleTime:           "04:30",
-		RequestIntervalSeconds: 12,
-		QueryLimit:             20,
-	})
-	if err != nil {
-		t.Fatalf("UpdateCollectorScheduleConfig() error = %v", err)
-	}
-	if updated.Config.Enabled || updated.Config.ScheduleTime != "04:30" || updated.Config.QueryLimit != 20 {
-		t.Fatalf("unexpected updated config: %+v", updated)
 	}
 }
 

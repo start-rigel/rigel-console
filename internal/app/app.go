@@ -54,8 +54,10 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/template", a.handleAdminTemplate)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/export", a.handleAdminExport)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/import", a.handleAdminImport)
+	mux.HandleFunc("/admin/api/v1/settings/system", a.handleAdminSystemSettings)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/", a.handleAdminKeywordSeedItem)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds", a.handleAdminKeywordSeeds)
+	mux.HandleFunc("/admin/settings", a.handleAdminSettings)
 	mux.HandleFunc("/admin/keywords/import", a.handleAdminKeywordImportPage)
 	mux.HandleFunc("/admin/keywords/new", a.handleAdminKeywordForm)
 	mux.HandleFunc("/admin/keywords/", a.handleAdminKeywordRoutes)
@@ -245,6 +247,17 @@ func (a *App) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleAdminHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/admin" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	if !a.requireAdmin(w, r) {
+		return
+	}
+	a.serveSPA(w)
+}
+
+func (a *App) handleAdminSettings(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/admin/settings" {
 		writeError(w, http.StatusNotFound, "not found")
 		return
 	}
@@ -525,6 +538,35 @@ func (a *App) handleAdminImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (a *App) handleAdminSystemSettings(w http.ResponseWriter, r *http.Request) {
+	if !a.requireAdmin(w, r) {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		payload, err := a.console.GetSystemSettings(r.Context())
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, payload)
+	case http.MethodPut:
+		var req model.UpdateSystemSettingsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		payload, err := a.console.UpdateSystemSettings(r.Context(), req)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, payload)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
 }
 
 func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {

@@ -20,7 +20,6 @@
 - 调用 `rigel-build-engine`
 - 展示推荐结果
 - 提供词库管理、导入导出和启停操作
-- 提供 JD 定时采集配置页面和后台代理接口
 
 ## 不负责什么
 
@@ -57,18 +56,13 @@
 ## 当前接口
 
 - `GET /healthz`
-- `GET /api/v1/bootstrap`
 - `GET /api/v1/session/anonymous`
-- `POST /api/v1/challenge/verify`
 - `POST /catalog/recommend`
 - `GET /`
 - `GET /admin/login`
 - `POST /admin/login`
 - `POST /admin/logout`
 - `GET /admin`
-- `GET /admin/jd-schedule`
-- `GET /admin/api/v1/jd/schedule`
-- `PUT /admin/api/v1/jd/schedule`
 - `GET /admin/api/v1/keyword-seeds`
 - `POST /admin/api/v1/keyword-seeds`
 - `PUT /admin/api/v1/keyword-seeds/{id}`
@@ -98,12 +92,6 @@ frontend/
 internal/app/web/dist
 ```
 
-当前页面主路径说明：
-
-- `frontend/` 是唯一页面源码目录
-- `internal/app/web/dist` 是唯一运行中的前端产物目录
-- 旧的 `internal/app/web/*.html` 静态页面已移除，不再作为维护路径
-
 启动示例：
 
 ```bash
@@ -112,35 +100,10 @@ go run ./cmd/server -config ./configs/config.yaml
 
 默认开发配置：
 
+- 后台用户名：`admin`
+- 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
-- 单 IP 小时额度：`20`
-- 单设备指纹小时额度：`12`
 - 匿名冷却秒数：`60`
-- 挑战通过放行秒数：`900`
-
-当前关键配置补充：
-
-- `postgres_dsn` 必填，词库管理直接读写 PostgreSQL 中的 `rigel_keyword_seeds`
-- `build_engine_token` 必填，`console -> build-engine` 默认强制走内部 token
-- 后台登录不再允许默认弱口令；至少要提供 `admin_password` 或 `admin_password_hash`
-- 推荐挑战如使用 Turnstile，需要同时配置 `challenge_provider=turnstile`、`challenge_site_key`、`challenge_secret`
-
-当前安全规则：
-
-- 前台推荐请求默认会附带设备指纹头 `X-Device-Fingerprint`
-- 前台会先读取 `/api/v1/bootstrap`，按后端下发的挑战配置决定是否渲染挑战组件
-- `rigel-console -> rigel-build-engine` 默认通过 `build_engine_token` 走内部 token 鉴权
-- 后台页面与后台 API 默认只允许私网 / VPN 来源访问
-- 后台登录态改为服务端 session，不再使用固定值 cookie
-- 后台修改类接口默认要求 `X-CSRF-Token`
-- 词库 CRUD / 导入导出直接使用 PostgreSQL 真源，不再走进程内存
-
-## 开发约束
-
-- `rigel-console` 默认是唯一公网入口；新增公开接口时，要先补匿名风控、冷却、缓存或挑战策略
-- 不要为了联调方便移除 `/admin` 的私网 / VPN 限制；如果需要改公网策略，必须先同步 `rigel-core`
-- 不要绕过 `build_engine_token` 直接请求 `rigel-build-engine` 高成本接口
-- 不要把真实挑战密钥、内部 token、后台真实口令写进仓库配置或 README 示例
 
 ## 前端开发与构建
 
@@ -167,10 +130,11 @@ npm run build
 
 说明：
 
-- React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/jd-schedule`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
+- 如果上游 `build-engine` 返回 JSON 错误，`rigel-console` 会尽量把原始错误信息继续透传出来，方便直接定位是空价格目录、参数问题还是数据库问题
+
+- React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
 - Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发
 - `npm run build` 后必须重新启动 `rigel-console`，新的内嵌页面产物才会生效
-- 前台与后台页面都支持本地日间 / 夜间主题切换，主题状态保存在浏览器本地
 
 ## 接口示例
 
@@ -206,10 +170,7 @@ curl http://localhost:18084/api/v1/session/anonymous
   "anonymous_id": "anon_xxxxx",
   "cooldown_seconds": 0,
   "remaining_ai_requests": 5,
-  "challenge_required": false,
-  "challenge_passed": false,
-  "risk_level": "normal",
-  "session_expires_in_seconds": 2592000
+  "challenge_required": false
 }
 ```
 
@@ -222,7 +183,6 @@ curl http://localhost:18084/api/v1/session/anonymous
 curl -X POST http://localhost:18084/catalog/recommend \
   -H "Content-Type: application/json" \
   -H "X-Anonymous-Id: anon_xxxxx" \
-  -H "X-Device-Fingerprint: fp_xxxxx" \
   -d '{
     "budget": 6000,
     "use_case": "gaming",
@@ -238,9 +198,7 @@ curl -X POST http://localhost:18084/catalog/recommend \
   "request_status": {
     "cache_hit": false,
     "remaining_ai_requests": 4,
-    "cooldown_seconds": 0,
-    "challenge_required": false,
-    "risk_level": "normal"
+    "cooldown_seconds": 0
   },
   "catalog_item_count": 24,
   "catalog_warnings": [],
@@ -306,8 +264,6 @@ curl -X POST http://localhost:18084/catalog/recommend \
 - console 当前会先向 build-engine 获取价格目录，再请求推荐草案
 - 当前返回结构以 `request_status`、`catalog_item_count`、`selection`、`advice` 为主
 - 相同参数优先返回缓存结果，不重复消耗匿名 AI 次数
-- 高风险或缺失指纹的请求会返回 `challenge_required=true`
-- 当前挑战验证接口为 `POST /api/v1/challenge/verify`
 
 ### 4. 后台登录
 
@@ -347,7 +303,6 @@ curl -I http://localhost:18084/admin/keywords/import
 
 - 前台推荐页允许匿名直接访问
 - 后台管理页必须先登录
-- 后台管理页默认只允许私网 / VPN 访问
 - 前台和后台页面路由明确分离
 - 页面前端统一由 React 渲染，Go 侧只负责返回嵌入式 SPA 页面壳和 API
 

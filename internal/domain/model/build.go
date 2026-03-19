@@ -17,13 +17,20 @@ type BrandPreference struct {
 	GPU string `json:"gpu,omitempty"`
 }
 
-// CatalogRecommendationResponse is the user-facing recommendation assembled from the aggregated price catalog.
 type CatalogRecommendationResponse struct {
-	RequestStatus    RequestStatus    `json:"request_status"`
-	CatalogItemCount int              `json:"catalog_item_count"`
-	CatalogWarnings  []string         `json:"catalog_warnings,omitempty"`
-	Selection        CatalogSelection `json:"selection"`
-	Advice           *Advice          `json:"advice,omitempty"`
+	RequestStatus    RequestStatus             `json:"request_status"`
+	Provider         string                    `json:"provider"`
+	FallbackUsed     bool                      `json:"fallback_used"`
+	Request          BuildRequestEcho          `json:"request"`
+	Summary          string                    `json:"summary"`
+	EstimatedTotal   float64                   `json:"estimated_total"`
+	WithinBudget     bool                      `json:"within_budget"`
+	Warnings         []string                  `json:"warnings,omitempty"`
+	BuildItems       []BuildRecommendationItem `json:"build_items"`
+	Advice           BuildAdvice               `json:"advice"`
+	CatalogItemCount int                       `json:"catalog_item_count,omitempty"`
+	CatalogWarnings  []string                  `json:"catalog_warnings,omitempty"`
+	Selection        CatalogSelection          `json:"selection,omitempty"`
 }
 
 type RequestStatus struct {
@@ -67,6 +74,41 @@ type Advice struct {
 	AlternativeNote string   `json:"alternative_note"`
 }
 
+type BuildRequestEcho struct {
+	Budget    float64 `json:"budget"`
+	UseCase   string  `json:"use_case"`
+	BuildMode string  `json:"build_mode"`
+	Notes     string  `json:"notes,omitempty"`
+}
+
+type BuildAdvice struct {
+	Reasons       []string `json:"reasons"`
+	Risks         []string `json:"risks"`
+	UpgradeAdvice []string `json:"upgrade_advice"`
+}
+
+type BuildProductRef struct {
+	DisplayName string  `json:"display_name"`
+	Model       string  `json:"model"`
+	Price       float64 `json:"price"`
+	MinPrice    float64 `json:"min_price"`
+	MaxPrice    float64 `json:"max_price"`
+	SampleCount int     `json:"sample_count"`
+}
+
+type BuildRecommendationItem struct {
+	Category           string            `json:"category"`
+	TargetModel        string            `json:"target_model"`
+	SelectionReason    string            `json:"selection_reason"`
+	PriceBasis         string            `json:"price_basis"`
+	Confidence         float64           `json:"confidence"`
+	RecommendedProduct *BuildProductRef  `json:"recommended_product,omitempty"`
+	CandidateProducts  []BuildProductRef `json:"candidate_products,omitempty"`
+	Missing            bool              `json:"missing"`
+	Reason             string            `json:"reason,omitempty"`
+	SuggestedKeyword   string            `json:"suggested_keyword,omitempty"`
+}
+
 // BuildEnginePriceCatalog mirrors build-engine's aggregated price catalog response.
 type BuildEnginePriceCatalog struct {
 	UseCase   string                   `json:"use_case"`
@@ -104,6 +146,38 @@ type CatalogAdviceResponse struct {
 	FallbackUsed bool             `json:"fallback_used"`
 	Selection    CatalogSelection `json:"selection"`
 	Advisory     Advice           `json:"advisory"`
+}
+
+type SystemSettingsResponse struct {
+	AIRuntime struct {
+		BaseURL                string `json:"base_url"`
+		Model                  string `json:"model"`
+		TimeoutSeconds         int    `json:"timeout_seconds"`
+		Enabled                bool   `json:"enabled"`
+		GatewayTokenConfigured bool   `json:"gateway_token_configured"`
+		GatewayTokenMasked     string `json:"gateway_token_masked"`
+		APITokenConfigured     bool   `json:"api_token_configured"`
+		APITokenMasked         string `json:"api_token_masked"`
+	} `json:"ai_runtime"`
+	CatalogAILimits struct {
+		MaxModelsPerCategory int `json:"max_models_per_category"`
+	} `json:"catalog_ai_limits"`
+}
+
+type UpdateSystemSettingsRequest struct {
+	AIRuntime struct {
+		BaseURL           string `json:"base_url,omitempty"`
+		GatewayToken      string `json:"gateway_token,omitempty"`
+		APIToken          string `json:"api_token,omitempty"`
+		Model             string `json:"model,omitempty"`
+		TimeoutSeconds    int    `json:"timeout_seconds,omitempty"`
+		Enabled           *bool  `json:"enabled,omitempty"`
+		ClearGatewayToken bool   `json:"clear_gateway_token,omitempty"`
+		ClearAPIToken     bool   `json:"clear_api_token,omitempty"`
+	} `json:"ai_runtime"`
+	CatalogAILimits struct {
+		MaxModelsPerCategory int `json:"max_models_per_category,omitempty"`
+	} `json:"catalog_ai_limits"`
 }
 
 type AnonymousSessionResponse struct {

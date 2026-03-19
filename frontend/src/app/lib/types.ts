@@ -16,9 +16,6 @@ export interface RequestStatus {
   cache_hit: boolean;
   remaining_ai_requests: number;
   cooldown_seconds: number;
-  challenge_required: boolean;
-  challenge_passed?: boolean;
-  risk_level?: string;
 }
 
 export interface AnonymousSessionResponse {
@@ -26,20 +23,6 @@ export interface AnonymousSessionResponse {
   cooldown_seconds: number;
   remaining_ai_requests: number;
   challenge_required: boolean;
-  challenge_passed?: boolean;
-  risk_level?: string;
-  session_expires_in_seconds?: number;
-}
-
-export interface ChallengeVerifyResponse {
-  verified: boolean;
-  pass_expires_in_seconds?: number;
-  risk_level?: string;
-}
-
-export interface PublicBootstrapResponse {
-  challenge_provider?: string;
-  challenge_site_key?: string;
 }
 
 export interface CatalogRecommendationItem {
@@ -73,10 +56,52 @@ export interface Advice {
 
 export interface CatalogRecommendationResponse {
   request_status: RequestStatus;
-  catalog_item_count: number;
+  provider: string;
+  fallback_used: boolean;
+  request: {
+    budget: number;
+    use_case: string;
+    build_mode: string;
+    notes?: string;
+  };
+  summary: string;
+  estimated_total: number;
+  within_budget: boolean;
+  warnings?: string[];
+  build_items: {
+    category: string;
+    target_model: string;
+    selection_reason: string;
+    price_basis: string;
+    confidence: number;
+    recommended_product?: {
+      display_name: string;
+      model: string;
+      price: number;
+      min_price: number;
+      max_price: number;
+      sample_count: number;
+    };
+    candidate_products?: Array<{
+      display_name: string;
+      model: string;
+      price: number;
+      min_price: number;
+      max_price: number;
+      sample_count: number;
+    }>;
+    missing: boolean;
+    reason?: string;
+    suggested_keyword?: string;
+  }[];
+  advice: {
+    reasons: string[];
+    risks: string[];
+    upgrade_advice: string[];
+  };
+  catalog_item_count?: number;
   catalog_warnings?: string[];
-  selection: CatalogSelection;
-  advice?: Advice;
+  selection?: CatalogSelection;
 }
 
 export interface KeywordSeed {
@@ -127,26 +152,34 @@ export interface KeywordSeedImportResponse {
   errors?: KeywordSeedImportError[];
 }
 
-export interface CollectorScheduleConfig {
-  id: string;
-  service_name: string;
-  enabled: boolean;
-  schedule_time: string;
-  request_interval_seconds: number;
-  query_limit: number;
-  created_at?: string;
-  updated_at?: string;
+export interface SystemSettingsResponse {
+  ai_runtime: {
+    base_url: string;
+    model: string;
+    timeout_seconds: number;
+    enabled: boolean;
+    gateway_token_configured: boolean;
+    gateway_token_masked: string;
+    api_token_configured: boolean;
+    api_token_masked: string;
+  };
+  catalog_ai_limits: {
+    max_models_per_category: number;
+  };
 }
 
-export interface CollectorScheduleResponse {
-  configured: boolean;
-  service_name?: string;
-  config?: CollectorScheduleConfig;
-}
-
-export interface CollectorScheduleUpsertRequest {
-  enabled: boolean;
-  schedule_time: string;
-  request_interval_seconds: number;
-  query_limit: number;
+export interface UpdateSystemSettingsRequest {
+  ai_runtime?: {
+    base_url?: string;
+    gateway_token?: string;
+    api_token?: string;
+    model?: string;
+    timeout_seconds?: number;
+    enabled?: boolean;
+    clear_gateway_token?: boolean;
+    clear_api_token?: boolean;
+  };
+  catalog_ai_limits?: {
+    max_models_per_category?: number;
+  };
 }

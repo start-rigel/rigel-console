@@ -2,36 +2,28 @@ import type {
   AdminLoginResponse,
   AnonymousSessionResponse,
   CatalogRecommendationResponse,
-  ChallengeVerifyResponse,
-  CollectorScheduleResponse,
-  CollectorScheduleUpsertRequest,
   GenerateBuildRequest,
   KeywordSeed,
   KeywordSeedImportResponse,
   KeywordSeedListResponse,
   KeywordSeedUpsertRequest,
-  PublicBootstrapResponse,
+  SystemSettingsResponse,
+  UpdateSystemSettingsRequest,
 } from './types';
 
-const fingerprintStorageKey = 'givezj8-device-fingerprint';
-
 type APIErrorShape = {
-  error?: string | { message?: string; cooldown_seconds?: number; challenge_required?: boolean; risk_level?: string };
+  error?: string | { message?: string; cooldown_seconds?: number };
 };
 
 export class APIError extends Error {
   status: number;
   cooldownSeconds: number;
-  challengeRequired: boolean;
-  riskLevel: string;
 
-  constructor(message: string, status: number, cooldownSeconds = 0, challengeRequired = false, riskLevel = '') {
+  constructor(message: string, status: number, cooldownSeconds = 0) {
     super(message);
     this.name = 'APIError';
     this.status = status;
     this.cooldownSeconds = cooldownSeconds;
-    this.challengeRequired = challengeRequired;
-    this.riskLevel = riskLevel;
   }
 }
 
@@ -40,23 +32,13 @@ async function parseJSON<T>(response: Response): Promise<T> {
 }
 
 async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (shouldAttachCSRF(input, init?.method)) {
-    const csrfToken = getCookie('rigel_admin_csrf');
-    if (csrfToken) {
-      headers.set('X-CSRF-Token', csrfToken);
-    }
-  }
   const response = await fetch(input, {
     credentials: 'same-origin',
     ...init,
-    headers,
   });
   if (!response.ok) {
     let message = `请求失败 (${response.status})`;
     let cooldownSeconds = 0;
-    let challengeRequired = false;
-    let riskLevel = '';
     try {
       const payload = (await response.json()) as APIErrorShape;
       if (typeof payload.error === 'string' && payload.error) {
@@ -64,25 +46,17 @@ async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Pro
       } else if (payload.error?.message) {
         message = payload.error.message;
         cooldownSeconds = payload.error.cooldown_seconds ?? 0;
-        challengeRequired = payload.error.challenge_required ?? false;
-        riskLevel = payload.error.risk_level ?? '';
       }
     } catch {
       // Ignore parse error, keep fallback message.
     }
-    throw new APIError(message, response.status, cooldownSeconds, challengeRequired, riskLevel);
+    throw new APIError(message, response.status, cooldownSeconds);
   }
   return parseJSON<T>(response);
 }
 
-export function getPublicBootstrap() {
-  return requestJSON<PublicBootstrapResponse>('/api/v1/bootstrap');
-}
-
 export function getAnonymousSession() {
-  return requestJSON<AnonymousSessionResponse>('/api/v1/session/anonymous', {
-    headers: { 'X-Device-Fingerprint': getDeviceFingerprint() },
-  });
+  return requestJSON<AnonymousSessionResponse>('/api/v1/session/anonymous');
 }
 
 export function generateRecommendation(payload: GenerateBuildRequest, anonymousID: string) {
@@ -91,21 +65,8 @@ export function generateRecommendation(payload: GenerateBuildRequest, anonymousI
     headers: {
       'Content-Type': 'application/json',
       'X-Anonymous-Id': anonymousID,
-      'X-Device-Fingerprint': getDeviceFingerprint(),
     },
     body: JSON.stringify(payload),
-  });
-}
-
-export function verifyChallenge(anonymousID: string, challengeToken: string) {
-  return requestJSON<ChallengeVerifyResponse>('/api/v1/challenge/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      anonymous_id: anonymousID,
-      device_fingerprint: getDeviceFingerprint(),
-      challenge_token: challengeToken,
-    }),
   });
 }
 
@@ -160,55 +121,14 @@ export function importKeywordSeeds(file: File) {
   });
 }
 
-export function getJDScheduleConfig() {
-  return requestJSON<CollectorScheduleResponse>('/admin/api/v1/jd/schedule');
+export function getSystemSettings() {
+  return requestJSON<SystemSettingsResponse>('/admin/api/v1/settings/system');
 }
 
-export function updateJDScheduleConfig(payload: CollectorScheduleUpsertRequest) {
-  return requestJSON<CollectorScheduleResponse>('/admin/api/v1/jd/schedule', {
+export function updateSystemSettings(payload: UpdateSystemSettingsRequest) {
+  return requestJSON<SystemSettingsResponse>('/admin/api/v1/settings/system', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-}
-
-function getDeviceFingerprint() {
-  const existing = window.localStorage.getItem(fingerprintStorageKey);
-  if (existing) {
-    return existing;
-  }
-  const payload = [
-    navigator.userAgent,
-    navigator.language,
-    String(window.screen.width),
-    String(window.screen.height),
-    String(window.devicePixelRatio),
-    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone ?? '' : '',
-  ].join('|');
-  const generated = `fp_${hashString(payload)}_${Math.random().toString(36).slice(2, 10)}`;
-  window.localStorage.setItem(fingerprintStorageKey, generated);
-  return generated;
-}
-
-function shouldAttachCSRF(input: RequestInfo | URL, method?: string) {
-  const normalizedMethod = (method ?? 'GET').toUpperCase();
-  if (normalizedMethod === 'GET' || normalizedMethod === 'HEAD') {
-    return false;
-  }
-  const target = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
-  return target.startsWith('/admin/');
-}
-
-function getCookie(name: string) {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : '';
-}
-
-function hashString(input: string) {
-  let hash = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return Math.abs(hash).toString(36);
 }
