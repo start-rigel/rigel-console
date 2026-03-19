@@ -8,9 +8,11 @@ import {
   LogOut,
   Minus,
   MonitorSmartphone,
+  Moon,
   Plus,
   Search,
   Sparkles,
+  Sun,
   Upload,
   Wallet,
 } from 'lucide-react';
@@ -83,6 +85,7 @@ const publicUseCaseOptions = [
   { value: 'office', label: '办公' },
   { value: 'design', label: '设计 / 剪辑' },
 ];
+const themeStorageKey = 'givezj8-theme';
 
 export default function App() {
   const pathname = window.location.pathname;
@@ -111,6 +114,7 @@ export default function App() {
 
 function RecommendationPage() {
   useDocumentTitle('给我装机吧 · AI 装机推荐');
+  const { isLight, toggleTheme } = useThemeMode();
   const [form, setForm] = useState<PublicFormState>(defaultPublicForm);
   const [anonymousID, setAnonymousID] = useState('');
   const [remaining, setRemaining] = useState('-');
@@ -191,11 +195,11 @@ function RecommendationPage() {
   }, [advice?.summary, result?.catalog_warnings]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(55,197,255,0.12),_transparent_28%),linear-gradient(180deg,_rgba(5,12,22,0.92),_rgba(5,12,22,1))]">
+    <div className="app-root app-page-shell relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(55,197,255,0.12),_transparent_28%),linear-gradient(180deg,_rgba(5,12,22,0.92),_rgba(5,12,22,1))]">
       <div className="pointer-events-none absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(109,184,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(109,184,255,0.12)_1px,transparent_1px)] [background-size:36px_36px]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,rgba(95,224,255,0.22),transparent_55%)]" />
 
-      <header className="sticky top-0 z-20 border-b border-cyan-400/10 bg-slate-950/70 backdrop-blur-md">
+      <header className="app-header sticky top-0 z-20 border-b border-cyan-400/10 bg-slate-950/70 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/10 p-2 shadow-[0_0_24px_rgba(95,224,255,0.12)]">
@@ -208,13 +212,14 @@ function RecommendationPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggleButton isLight={isLight} onToggle={toggleTheme} />
             <NavLink href="/admin/login">后台管理</NavLink>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-4 sm:py-6 lg:h-[calc(100vh-81px)] lg:py-4">
-        <section className="mx-auto max-w-7xl rounded-[28px] border border-cyan-300/28 bg-slate-950/78 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(130,220,255,0.08)] backdrop-blur sm:p-6 lg:h-full lg:overflow-hidden">
+        <section className="app-main-panel mx-auto max-w-7xl rounded-[28px] border border-cyan-300/28 bg-slate-950/78 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(130,220,255,0.08)] backdrop-blur sm:p-6 lg:h-full lg:overflow-hidden">
           <div className="grid gap-5 lg:h-full lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] lg:items-start">
             <div className={scrollPanelClassName}>
               <section>
@@ -225,10 +230,10 @@ function RecommendationPage() {
               </section>
 
               <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-                <span className="rounded-full border border-cyan-300/18 bg-cyan-400/8 px-3 py-1.5">基于当前京东硬件价格整理</span>
+                <span className="app-chip rounded-full border border-cyan-300/18 bg-cyan-400/8 px-3 py-1.5">基于当前京东硬件价格整理</span>
               </div>
 
-              <section className="rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)] sm:p-5">
+              <section className="app-form-panel rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)] sm:p-5">
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold text-slate-50 sm:text-xl">先填需求，再出结果</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -238,7 +243,7 @@ function RecommendationPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                   <Field label="预算 (¥)" icon={<Wallet className="size-4" />}>
-                    <div className="flex items-center rounded-xl border border-cyan-300/18 bg-slate-900/72 focus-within:border-cyan-200/50">
+                    <div className="app-budget-stepper flex items-center rounded-xl border border-cyan-300/18 bg-slate-900/72 focus-within:border-cyan-200/50">
                       <button
                         type="button"
                         className="flex h-12 w-12 items-center justify-center border-r border-cyan-300/14 text-slate-300 transition hover:bg-white/5 hover:text-slate-50"
@@ -284,9 +289,9 @@ function RecommendationPage() {
                             <button
                               key={option.value}
                               type="button"
-                              className={`h-12 rounded-xl border px-4 text-sm font-medium transition ${
+                              className={`app-choice-button h-12 rounded-xl border px-4 text-sm font-medium transition ${
                                 active
-                                  ? 'border-cyan-200/60 bg-cyan-300/18 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.12)]'
+                                  ? 'app-choice-button-active border-cyan-200/60 bg-cyan-300/18 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.12)]'
                                   : 'border-cyan-300/18 bg-slate-900/72 text-slate-300 hover:border-cyan-200/35 hover:text-slate-100'
                               }`}
                               onClick={() => setForm((prev) => ({ ...prev, useCase: option.value }))}
@@ -312,7 +317,7 @@ function RecommendationPage() {
 
                   <button
                     type="submit"
-                    className="flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-100"
+                    className="app-submit-button flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-100"
                     disabled={isLoading}
                   >
                     {isLoading ? '生成中...' : '生成配置方案'}
@@ -325,14 +330,14 @@ function RecommendationPage() {
               </section>
             </div>
 
-              <section className={scrollPanelClassName}>
+              <section className={`${scrollPanelClassName} app-result-region`}>
                 <ResultPanel result={result} summaryText={summaryText} selectedItems={selectedItems} error={error} />
               </section>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-cyan-400/10 bg-slate-950/70 backdrop-blur-sm lg:hidden">
+      <footer className="app-footer border-t border-cyan-400/10 bg-slate-950/70 backdrop-blur-sm lg:hidden">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-slate-500">
           <p>© 2026 给我装机吧 · givezj8.cn · 基于当前硬件价格生成装机建议</p>
         </div>
@@ -815,7 +820,7 @@ function ResultPanel({
 }) {
   if (!result) {
     return (
-      <div className="rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-6 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
+      <div className="app-result-panel rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-6 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
         <div className="flex min-h-[500px] flex-col items-center justify-center px-6 py-10 text-center">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-300/24 bg-cyan-400/8 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.08)] sm:mb-6 sm:h-20 sm:w-20">
             <Sparkles className="size-8 text-cyan-300 sm:size-10" />
@@ -832,7 +837,7 @@ function ResultPanel({
 
   const advice = result.advice;
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-6 duration-500 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
+    <div className="app-result-panel animate-in fade-in slide-in-from-bottom-4 rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-6 duration-500 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">推荐结果</p>
@@ -860,7 +865,7 @@ function ResultPanel({
         />
       </section>
 
-      <section className="mt-5 rounded-xl border border-cyan-300/24 bg-cyan-400/4 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
+      <section className="app-soft-panel mt-5 rounded-xl border border-cyan-300/24 bg-cyan-400/4 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">推荐摘要</p>
         <p className="mt-2 text-sm leading-7 text-slate-200">{summaryText}</p>
       </section>
@@ -888,7 +893,7 @@ function ResultPanel({
           {selectedItems.map((item) => (
             <article
               key={`${item.category}-${item.normalized_key}`}
-              className="rounded-xl border border-cyan-300/20 bg-slate-900/72 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]"
+              className="app-soft-panel rounded-xl border border-cyan-300/20 bg-slate-900/72 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
@@ -938,7 +943,7 @@ function ResultPanel({
       ) : null}
 
       {advice?.alternative_note ? (
-        <section className="mt-4 rounded-xl border border-cyan-300/12 bg-slate-900/72 p-4 text-sm leading-6 text-slate-400">
+        <section className="app-soft-panel mt-4 rounded-xl border border-cyan-300/12 bg-slate-900/72 p-4 text-sm leading-6 text-slate-400">
           {advice.alternative_note}
         </section>
       ) : null}
@@ -948,7 +953,7 @@ function ResultPanel({
 
 function AdviceCard({ title, items }: { title: string; items?: string[] }) {
   return (
-    <div className="rounded-xl border border-cyan-300/20 bg-slate-900/72 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
+    <div className="app-soft-panel rounded-xl border border-cyan-300/20 bg-slate-900/72 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
       <p className="text-sm font-semibold text-slate-100">{title}</p>
       <div className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
         {items?.length ? items.map((item) => <p key={item}>• {item}</p>) : <p>暂无内容</p>}
@@ -968,8 +973,9 @@ function AdminScaffold({
   toolbar?: ReactNode;
   children: ReactNode;
 }) {
+  const { isLight, toggleTheme } = useThemeMode();
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(55,197,255,0.12),_transparent_28%),linear-gradient(180deg,_rgba(5,12,22,0.92),_rgba(5,12,22,1))]">
+    <div className="app-root app-admin-shell relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(55,197,255,0.12),_transparent_28%),linear-gradient(180deg,_rgba(5,12,22,0.92),_rgba(5,12,22,1))]">
       <div className="pointer-events-none absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(109,184,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(109,184,255,0.12)_1px,transparent_1px)] [background-size:36px_36px]" />
       <div className="container relative z-10 mx-auto max-w-7xl px-4 py-8 sm:py-10">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -978,7 +984,10 @@ function AdminScaffold({
             <h1 className="mt-2 text-4xl leading-none text-slate-50 sm:text-5xl">{title}</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">{description}</p>
           </div>
-          {toolbar ? <div className="flex flex-wrap gap-2">{toolbar}</div> : null}
+          <div className="flex flex-wrap gap-2">
+            <ThemeToggleButton isLight={isLight} onToggle={toggleTheme} />
+            {toolbar}
+          </div>
         </div>
         <div className="mt-8">{children}</div>
       </div>
@@ -999,7 +1008,7 @@ function AdminFeatureCard({
 }) {
   return (
     <a
-      className="group rounded-[24px] border border-cyan-300/24 bg-slate-950/84 p-5 shadow-[0_18px_56px_rgba(0,0,0,0.22),inset_0_0_0_1px_rgba(130,220,255,0.05)] transition hover:-translate-y-0.5 hover:border-cyan-200/40"
+      className="app-soft-panel group rounded-[24px] border border-cyan-300/24 bg-slate-950/84 p-5 shadow-[0_18px_56px_rgba(0,0,0,0.22),inset_0_0_0_1px_rgba(130,220,255,0.05)] transition hover:-translate-y-0.5 hover:border-cyan-200/40"
       href={href}
     >
       <div className="flex items-center gap-3">
@@ -1014,7 +1023,7 @@ function AdminFeatureCard({
 
 function HighlightCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-2xl border border-cyan-300/20 bg-slate-900/74 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
+    <div className="app-soft-panel rounded-2xl border border-cyan-300/20 bg-slate-900/74 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-slate-50">{value}</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">{hint}</p>
@@ -1024,7 +1033,7 @@ function HighlightCard({ label, value, hint }: { label: string; value: string; h
 
 function StatusPill({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-3 py-2 text-xs text-slate-300">
+    <span className="app-status-pill inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-3 py-2 text-xs text-slate-300">
       {children}
     </span>
   );
@@ -1033,11 +1042,24 @@ function StatusPill({ children }: { children: ReactNode }) {
 function NavLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
-      className="inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-200/40 hover:text-slate-50"
+      className="app-nav-link inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-200/40 hover:text-slate-50"
       href={href}
     >
       {children}
     </a>
+  );
+}
+
+function ThemeToggleButton({ isLight, onToggle }: { isLight: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className="app-theme-toggle inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-200/40 hover:text-slate-50"
+      onClick={onToggle}
+    >
+      {isLight ? <Moon className="size-4" /> : <Sun className="size-4" />}
+      <span>{isLight ? '夜间' : '日间'}</span>
+    </button>
   );
 }
 
@@ -1054,17 +1076,37 @@ function Field({ label, icon, children }: { label: string; icon?: ReactNode; chi
 }
 
 const fieldClassName =
-  'w-full rounded-xl border border-cyan-300/18 bg-slate-900/72 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-200/50';
+  'app-control w-full rounded-xl border border-cyan-300/18 bg-slate-900/72 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-200/50';
 
 const controlClassName = `${fieldClassName} h-12 px-4`;
 const scrollPanelClassName =
-  'space-y-4 lg:h-full lg:overflow-auto lg:pr-2 [scrollbar-width:thin] [scrollbar-color:rgba(103,232,249,0.28)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-cyan-300/25';
+  'app-scroll-panel space-y-4 lg:h-full lg:overflow-auto lg:pr-2 [scrollbar-width:thin] [scrollbar-color:rgba(103,232,249,0.28)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-cyan-300/25';
 
 const secondaryButtonClassName =
   'inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-200/40 hover:text-slate-50';
 
 const primaryButtonClassName =
   'inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200';
+
+function useThemeMode() {
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') {
+      return 'dark';
+    }
+    return window.localStorage.getItem(themeStorageKey) === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('light-theme', themeMode === 'light');
+    window.localStorage.setItem(themeStorageKey, themeMode);
+  }, [themeMode]);
+
+  return {
+    isLight: themeMode === 'light',
+    toggleTheme: () => setThemeMode((prev) => (prev === 'light' ? 'dark' : 'light')),
+  };
+}
 
 function useDocumentTitle(title: string) {
   useEffect(() => {

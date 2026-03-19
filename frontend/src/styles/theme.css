@@ -41,6 +41,36 @@
   --sidebar-ring: #5fe0ff;
 }
 
+html.light-theme {
+  --background: #eef5fb;
+  --foreground: #0f1b2b;
+  --card: #ffffff;
+  --card-foreground: #102033;
+  --popover: #ffffff;
+  --popover-foreground: #102033;
+  --primary: #0ea5c6;
+  --primary-foreground: #f8feff;
+  --secondary: #dceaf5;
+  --secondary-foreground: #143049;
+  --muted: #e7f0f7;
+  --muted-foreground: #567086;
+  --accent: #d9edf5;
+  --accent-foreground: #17324b;
+  --border: rgba(15, 118, 150, 0.18);
+  --input: #ffffff;
+  --input-background: #ffffff;
+  --switch-background: #bfd6e3;
+  --ring: #0ea5c6;
+  --sidebar: #edf5fa;
+  --sidebar-foreground: #102033;
+  --sidebar-primary: #0ea5c6;
+  --sidebar-primary-foreground: #f8feff;
+  --sidebar-accent: #d9edf5;
+  --sidebar-accent-foreground: #17324b;
+  --sidebar-border: rgba(15, 118, 150, 0.18);
+  --sidebar-ring: #0ea5c6;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -97,6 +127,13 @@
     background-attachment: fixed;
   }
 
+  html.light-theme body {
+    background-image:
+      radial-gradient(circle at top, rgba(14, 165, 198, 0.12), transparent 34%),
+      radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.08), transparent 28%),
+      linear-gradient(180deg, rgba(238, 245, 251, 0.98), rgba(231, 240, 247, 1));
+  }
+
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
@@ -151,4 +188,105 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+
+html.light-theme .app-page-shell,
+html.light-theme .app-admin-shell {
+  background-image:
+    radial-gradient(circle at top, rgba(14, 165, 198, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(238, 245, 251, 0.96), rgba(231, 240, 247, 1));
+}
+
+html.light-theme .app-header,
+html.light-theme .app-footer {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(15, 118, 150, 0.12) !important;
+}
+
+html.light-theme .app-main-panel,
+html.light-theme .app-form-panel,
+html.light-theme .app-result-panel,
+html.light-theme .app-soft-panel {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border-color: rgba(15, 118, 150, 0.16) !important;
+  box-shadow:
+    0 20px 60px rgba(15, 23, 42, 0.08),
+    inset 0 0 0 1px rgba(125, 211, 252, 0.05) !important;
+}
+
+html.light-theme .app-chip {
+  background: rgba(14, 165, 198, 0.1) !important;
+  border-color: rgba(14, 165, 198, 0.22) !important;
+  color: #155e75 !important;
+}
+
+html.light-theme .app-nav-link,
+html.light-theme .app-theme-toggle,
+html.light-theme .app-status-pill {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(15, 118, 150, 0.16) !important;
+  color: #334155 !important;
+}
+
+html.light-theme .app-control,
+html.light-theme .app-budget-stepper {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(15, 118, 150, 0.16) !important;
+  color: #0f172a !important;
+}
+
+html.light-theme .app-submit-button {
+  background: #0ea5c6 !important;
+  color: #f8feff !important;
+}
+
+html.light-theme .app-choice-button {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(15, 118, 150, 0.16) !important;
+  color: #334155 !important;
+}
+
+html.light-theme .app-choice-button-active {
+  background: rgba(14, 165, 198, 0.12) !important;
+  border-color: rgba(14, 165, 198, 0.4) !important;
+  color: #155e75 !important;
+}
+
+html.light-theme .app-scroll-panel {
+  scrollbar-color: rgba(14, 165, 198, 0.28) transparent;
+}
+
+html.light-theme .app-scroll-panel::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 198, 0.28) !important;
+}
+
+html.light-theme .app-root .text-slate-50,
+html.light-theme .app-root .text-slate-100,
+html.light-theme .app-root .text-slate-200 {
+  color: #0f172a !important;
+}
+
+html.light-theme .app-root .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light-theme .app-root .text-slate-400,
+html.light-theme .app-root .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light-theme .app-root .bg-slate-900\/72,
+html.light-theme .app-root .bg-slate-950\/82,
+html.light-theme .app-root .bg-slate-950\/84,
+html.light-theme .app-root .bg-slate-950\/78 {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+html.light-theme .app-root .border-cyan-300\/18,
+html.light-theme .app-root .border-cyan-300\/20,
+html.light-theme .app-root .border-cyan-300\/24,
+html.light-theme .app-root .border-cyan-300\/28,
+html.light-theme .app-root .border-cyan-300\/14,
+html.light-theme .app-root .border-cyan-300\/12 {
+  border-color: rgba(15, 118, 150, 0.16) !important;
 }

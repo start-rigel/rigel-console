@@ -133,6 +133,7 @@ npm run build
 - React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
 - Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发
 - `npm run build` 后必须重新启动 `rigel-console`，新的内嵌页面产物才会生效
+- 前台与后台页面都支持本地日间 / 夜间主题切换，主题状态保存在浏览器本地
 
 ## 接口示例
 
