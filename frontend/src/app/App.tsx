@@ -868,11 +868,29 @@ function ResultPanel({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">推荐结果</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-50">目录条目 {result.catalog_item_count}</h3>
-          <p className="mt-2 text-sm text-slate-400">估算总价 ¥{result.selection.estimated_total.toLocaleString()}</p>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-50">这是一套可以直接看的装机方案</h3>
+          <p className="mt-2 text-sm text-slate-400">先看总价和摘要，再决定要不要细看每个配件。</p>
         </div>
         <StatusPill>{result.request_status.cache_hit ? '已返回最近结果' : '已生成新结果'}</StatusPill>
       </div>
+
+      <section className="mt-5 grid gap-4 sm:grid-cols-3">
+        <HighlightCard
+          label="估算总价"
+          value={`¥${result.selection.estimated_total.toLocaleString()}`}
+          hint="当前这套配置按选中配件价格估算"
+        />
+        <HighlightCard
+          label="已选配件"
+          value={`${selectedItems.length} 项`}
+          hint="包含 CPU、GPU、主板、内存等核心部件"
+        />
+        <HighlightCard
+          label="价格样本"
+          value={`${result.catalog_item_count} 条`}
+          hint="当前推荐建立在已整理的价格目录之上"
+        />
+      </section>
 
       <section className="mt-5 rounded-xl border border-cyan-300/24 bg-cyan-400/4 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">推荐摘要</p>
@@ -881,7 +899,7 @@ function ResultPanel({
 
       {result.selection.warnings?.length ? (
         <section className="mt-4 rounded-xl border border-amber-300/24 bg-amber-400/8 p-4 text-sm text-amber-100">
-          <p className="font-semibold">当前警告</p>
+          <p className="font-semibold">你需要先注意</p>
           <div className="mt-2 space-y-1">
             {result.selection.warnings.map((item) => (
               <p key={item}>• {item}</p>
@@ -892,7 +910,10 @@ function ResultPanel({
 
       <section className="mt-6">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-slate-100">主机配置</h4>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-100">配件清单</h4>
+            <p className="mt-1 text-xs text-slate-500">每项都附带参考价和选择依据。</p>
+          </div>
           <span className="text-xs text-slate-500">共 {selectedItems.length} 项</span>
         </div>
         <div className="mt-4 space-y-3">
@@ -908,9 +929,17 @@ function ResultPanel({
                     <p className="text-sm font-medium text-slate-100">{item.category}</p>
                   </div>
                   <p className="mt-1 break-words text-sm text-slate-300">{item.display_name}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    样本 {item.sample_count} · 中位价 ¥{item.median_price.toLocaleString()}
-                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span className="rounded-full border border-cyan-300/14 bg-cyan-400/6 px-2 py-1">
+                      参考价 ¥{item.selected_price.toLocaleString()}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/14 bg-white/5 px-2 py-1">
+                      中位价 ¥{item.median_price.toLocaleString()}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/14 bg-white/5 px-2 py-1">
+                      样本 {item.sample_count}
+                    </span>
+                  </div>
                   {item.reasons?.length ? (
                     <div className="mt-2 space-y-1">
                       {item.reasons.map((reason) => (
@@ -922,7 +951,8 @@ function ResultPanel({
                   ) : null}
                 </div>
                 <div className="shrink-0 text-left sm:text-right">
-                  <p className="font-semibold text-cyan-200">¥{item.selected_price.toLocaleString()}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">当前参考价</p>
+                  <p className="mt-1 text-xl font-semibold text-cyan-200">¥{item.selected_price.toLocaleString()}</p>
                 </div>
               </div>
             </article>
@@ -932,10 +962,10 @@ function ResultPanel({
 
       {advice ? (
         <section className="mt-6 grid gap-3 md:grid-cols-2">
-          <AdviceCard title="推荐理由" items={advice.reasons} />
-          <AdviceCard title="适用场景" items={advice.fit_for} />
-          <AdviceCard title="风险提醒" items={advice.risks} />
-          <AdviceCard title="升级建议" items={advice.upgrade_advice} />
+          <AdviceCard title="为什么这样配" items={advice.reasons} />
+          <AdviceCard title="适合什么人" items={advice.fit_for} />
+          <AdviceCard title="你需要注意" items={advice.risks} />
+          <AdviceCard title="后续还能怎么升" items={advice.upgrade_advice} />
         </section>
       ) : null}
 
@@ -1022,6 +1052,16 @@ function MetricCard({ icon, label, value }: { icon: ReactNode; label: string; va
         <span>{label}</span>
       </div>
       <p className="mt-4 text-2xl font-semibold text-slate-50">{value}</p>
+    </div>
+  );
+}
+
+function HighlightCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-2xl border border-cyan-300/20 bg-slate-900/74 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">{label}</p>
+      <p className="mt-3 text-2xl font-semibold text-slate-50">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{hint}</p>
     </div>
   );
 }
