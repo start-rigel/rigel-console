@@ -15,6 +15,7 @@ import (
 )
 
 type buildClientStub struct{}
+type jdCollectorClientStub struct{}
 
 func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	return model.BuildEnginePriceCatalog{
@@ -43,13 +44,41 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 	}, nil
 }
 
+func (jdCollectorClientStub) GetScheduleConfig(context.Context) (model.CollectorScheduleResponse, error) {
+	return model.CollectorScheduleResponse{
+		Configured: true,
+		Config: model.CollectorScheduleConfig{
+			ID:                     "cfg-1",
+			ServiceName:            "rigel-jd-collector",
+			Enabled:                true,
+			ScheduleTime:           "03:00",
+			RequestIntervalSeconds: 3,
+			QueryLimit:             5,
+		},
+	}, nil
+}
+
+func (jdCollectorClientStub) UpdateScheduleConfig(_ context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
+	return model.CollectorScheduleResponse{
+		Configured: true,
+		Config: model.CollectorScheduleConfig{
+			ID:                     "cfg-1",
+			ServiceName:            "rigel-jd-collector",
+			Enabled:                payload.Enabled,
+			ScheduleTime:           payload.ScheduleTime,
+			RequestIntervalSeconds: payload.RequestIntervalSeconds,
+			QueryLimit:             payload.QueryLimit,
+		},
+	}, nil
+}
+
 func newTestApp() *App {
 	cfg := config.Config{
 		ServiceName:         "rigel-console",
 		AdminCookieName:     "rigel_admin_session",
 		AnonymousCookieName: "rigel_anonymous_id",
 	}
-	console := consoleservice.New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	console := consoleservice.New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	return New(cfg, console)
 }
 
@@ -86,6 +115,17 @@ func TestAdminKeywordsRequiresLogin(t *testing.T) {
 func TestAdminKeywordAPIWithLogin(t *testing.T) {
 	application := newTestApp()
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/keyword-seeds", nil)
+	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminJDScheduleAPIWithLogin(t *testing.T) {
+	application := newTestApp()
+	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/jd/schedule", nil)
 	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)

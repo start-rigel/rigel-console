@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  CalendarClock,
   CheckCircle2,
   Database,
   Download,
@@ -21,16 +22,19 @@ import {
   createKeywordSeed,
   generateRecommendation,
   getAnonymousSession,
+  getJDScheduleConfig,
   getKeywordSeed,
   importKeywordSeeds,
   listKeywordSeeds,
   loginAdmin,
   logoutAdmin,
   setKeywordSeedEnabled,
+  updateJDScheduleConfig,
   updateKeywordSeed,
 } from './lib/api';
 import type {
   CatalogRecommendationResponse,
+  CollectorScheduleUpsertRequest,
   GenerateBuildRequest,
   KeywordSeed,
   KeywordSeedImportResponse,
@@ -105,6 +109,9 @@ export default function App() {
   }
   if (pathname === '/admin/keywords/import') {
     return <KeywordImportPage />;
+  }
+  if (pathname === '/admin/jd-schedule') {
+    return <JDSchedulePage />;
   }
   if (editMatch) {
     return <KeywordFormPage editID={decodeURIComponent(editMatch[1])} />;
@@ -448,6 +455,12 @@ function AdminHomePage() {
           icon={<FileSpreadsheet className="size-5 text-cyan-300" />}
           title="Excel 导入"
           text="下载模板、上传工作簿、查看导入结果。"
+        />
+        <AdminFeatureCard
+          href="/admin/jd-schedule"
+          icon={<CalendarClock className="size-5 text-cyan-300" />}
+          title="JD 定时采集"
+          text="配置每日执行时间、请求间隔和单次查询数量。"
         />
       </div>
     </AdminScaffold>
@@ -801,6 +814,181 @@ function KeywordImportPage() {
           <pre className="mt-4 overflow-x-auto whitespace-pre-wrap break-words rounded-2xl border border-cyan-300/12 bg-slate-900/74 p-4 text-xs leading-6 text-slate-400">
             {result ? JSON.stringify(result, null, 2) : '等待上传'}
           </pre>
+        </aside>
+      </div>
+    </AdminScaffold>
+  );
+}
+
+function JDSchedulePage() {
+  useDocumentTitle('givezj8.cn · JD 定时采集');
+  const [form, setForm] = useState<CollectorScheduleUpsertRequest>({
+    enabled: false,
+    schedule_time: '03:00',
+    request_interval_seconds: 3,
+    query_limit: 5,
+  });
+  const [configured, setConfigured] = useState(false);
+  const [status, setStatus] = useState('读取中');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getJDScheduleConfig()
+      .then((payload) => {
+        if (cancelled) {
+          return;
+        }
+        setConfigured(payload.configured);
+        if (payload.config) {
+          setForm({
+            enabled: payload.config.enabled,
+            schedule_time: payload.config.schedule_time,
+            request_interval_seconds: payload.config.request_interval_seconds,
+            query_limit: payload.config.query_limit,
+          });
+          setStatus(payload.config.enabled ? '当前已启用定时采集' : '当前已配置但未启用');
+        } else {
+          setStatus('当前未配置，不会自动启动定时采集');
+        }
+      })
+      .catch((err) => {
+        if (err instanceof APIError && err.status === 401) {
+          window.location.href = '/admin/login';
+          return;
+        }
+        setStatus(err instanceof APIError ? err.message : '读取配置失败');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = await updateJDScheduleConfig({
+        enabled: form.enabled,
+        schedule_time: form.schedule_time,
+        request_interval_seconds: Number(form.request_interval_seconds),
+        query_limit: Number(form.query_limit),
+      });
+      setConfigured(payload.configured);
+      if (payload.config) {
+        setForm({
+          enabled: payload.config.enabled,
+          schedule_time: payload.config.schedule_time,
+          request_interval_seconds: payload.config.request_interval_seconds,
+          query_limit: payload.config.query_limit,
+        });
+      }
+      setStatus(payload.config?.enabled ? '定时采集已启用并保存' : '定时采集配置已保存，但当前关闭');
+    } catch (err) {
+      setStatus(err instanceof APIError ? err.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <AdminScaffold
+      title="JD 定时采集"
+      description="由后台统一管理每日采集时间。没有配置或配置关闭时，jd-collector 不会启动定时任务。"
+      toolbar={
+        <>
+          <NavLink href="/admin">后台首页</NavLink>
+          <NavLink href="/admin/keywords">词库列表</NavLink>
+        </>
+      }
+    >
+      <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-[24px] border border-cyan-300/24 bg-slate-950/84 p-6 shadow-[0_18px_56px_rgba(0,0,0,0.22),inset_0_0_0_1px_rgba(130,220,255,0.05)]">
+          {loading ? (
+            <p className="text-sm text-slate-400">读取配置中...</p>
+          ) : (
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-cyan-300/18 bg-slate-900/72 px-4 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">开启定时任务</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">关闭后，服务不会按天自动采集；仍可保留配置。</p>
+                </div>
+                <button
+                  type="button"
+                  className={`inline-flex h-10 min-w-24 items-center justify-center rounded-full border px-4 text-sm font-medium transition ${
+                    form.enabled
+                      ? 'border-cyan-200/60 bg-cyan-300/18 text-cyan-100'
+                      : 'border-cyan-300/18 bg-slate-950/70 text-slate-300'
+                  }`}
+                  onClick={() => setForm((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                >
+                  {form.enabled ? '已开启' : '已关闭'}
+                </button>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <Field label="每日执行时间">
+                  <input
+                    className={controlClassName}
+                    type="time"
+                    value={form.schedule_time}
+                    onChange={(event) => setForm((prev) => ({ ...prev, schedule_time: event.target.value }))}
+                    required
+                  />
+                </Field>
+                <Field label="每次查询条数">
+                  <input
+                    className={controlClassName}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.query_limit}
+                    onChange={(event) => setForm((prev) => ({ ...prev, query_limit: Number(event.target.value) }))}
+                    required
+                  />
+                </Field>
+              </div>
+
+              <Field label="每次接口请求间隔（秒）">
+                <input
+                  className={controlClassName}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.request_interval_seconds}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, request_interval_seconds: Number(event.target.value) }))
+                  }
+                  required
+                />
+              </Field>
+
+              <button className={primaryButtonClassName} type="submit" disabled={saving}>
+                <CheckCircle2 className="size-4" />
+                {saving ? '保存中...' : '保存调度配置'}
+              </button>
+            </form>
+          )}
+          <p className="mt-4 text-sm text-slate-400">{status}</p>
+        </section>
+
+        <aside className="rounded-[24px] border border-cyan-300/24 bg-slate-950/84 p-6 shadow-[0_18px_56px_rgba(0,0,0,0.22),inset_0_0_0_1px_rgba(130,220,255,0.05)]">
+          <h3 className="text-lg font-semibold text-slate-100">当前规则</h3>
+          <div className="mt-4 space-y-3 text-sm leading-6 text-slate-400">
+            <p>1. 没有配置时，jd-collector 不会自动启动定时采集。</p>
+            <p>2. 配置已保存但关闭时，服务继续运行，但不会进入每日采集。</p>
+            <p>3. 开启后按每日时间执行，并按设置的接口间隔串行请求。</p>
+            <p>4. 采集完成后会写入原始商品、价格快照和型号级每日价格快照。</p>
+          </div>
+          <div className="mt-5 rounded-2xl border border-cyan-300/18 bg-slate-900/72 p-4 text-sm text-slate-300">
+            当前状态：{configured ? '已存在配置' : '未配置'}
+          </div>
         </aside>
       </div>
     </AdminScaffold>

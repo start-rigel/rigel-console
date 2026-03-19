@@ -40,6 +40,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
 	mux.HandleFunc("/admin/login", a.handleAdminLogin)
 	mux.HandleFunc("/admin/logout", a.handleAdminLogout)
+	mux.HandleFunc("/admin/api/v1/jd/schedule", a.handleAdminJDSchedule)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/template", a.handleAdminTemplate)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/export", a.handleAdminExport)
 	mux.HandleFunc("/admin/api/v1/keyword-seeds/import", a.handleAdminImport)
@@ -49,6 +50,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/admin/keywords/new", a.handleAdminKeywordForm)
 	mux.HandleFunc("/admin/keywords/", a.handleAdminKeywordRoutes)
 	mux.HandleFunc("/admin/keywords", a.handleAdminKeywords)
+	mux.HandleFunc("/admin/jd-schedule", a.handleAdminJDSchedulePage)
 	mux.HandleFunc("/admin", a.handleAdminHome)
 	mux.HandleFunc("/", a.handleIndex)
 	return mux
@@ -186,6 +188,17 @@ func (a *App) handleAdminKeywordImportPage(w http.ResponseWriter, r *http.Reques
 	a.serveSPA(w)
 }
 
+func (a *App) handleAdminJDSchedulePage(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/admin/jd-schedule" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	if !a.requireAdmin(w, r) {
+		return
+	}
+	a.serveSPA(w)
+}
+
 func (a *App) handleAdminKeywordRoutes(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdmin(w, r) {
 		return
@@ -195,6 +208,35 @@ func (a *App) handleAdminKeywordRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeError(w, http.StatusNotFound, "not found")
+}
+
+func (a *App) handleAdminJDSchedule(w http.ResponseWriter, r *http.Request) {
+	if !a.requireAdmin(w, r) {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		payload, err := a.console.GetCollectorScheduleConfig(r.Context())
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, payload)
+	case http.MethodPut:
+		var req model.CollectorScheduleUpsertRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		payload, err := a.console.UpdateCollectorScheduleConfig(r.Context(), req)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, payload)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
 }
 
 func (a *App) handleAdminKeywordSeeds(w http.ResponseWriter, r *http.Request) {

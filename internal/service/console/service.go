@@ -25,6 +25,11 @@ type BuildEngineClient interface {
 	GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error)
 }
 
+type JDCollectorClient interface {
+	GetScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error)
+	UpdateScheduleConfig(ctx context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error)
+}
+
 type cachedRecommendation struct {
 	response  model.CatalogRecommendationResponse
 	expiresAt time.Time
@@ -38,6 +43,7 @@ type sessionUsage struct {
 
 type Service struct {
 	buildClient      BuildEngineClient
+	jdCollector      JDCollectorClient
 	adminUsername    string
 	adminPassword    string
 	anonymousLimit   int
@@ -51,7 +57,7 @@ type Service struct {
 	anonymousUsage map[string]sessionUsage
 }
 
-func New(buildClient BuildEngineClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration) *Service {
+func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration) *Service {
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}
@@ -78,6 +84,7 @@ func New(buildClient BuildEngineClient, adminUsername, adminPassword string, ano
 
 	return &Service{
 		buildClient:      buildClient,
+		jdCollector:      jdCollector,
 		adminUsername:    adminUsername,
 		adminPassword:    adminPassword,
 		anonymousLimit:   anonymousLimit,
@@ -88,6 +95,20 @@ func New(buildClient BuildEngineClient, adminUsername, adminPassword string, ano
 		recommendCache:   make(map[string]cachedRecommendation),
 		anonymousUsage:   make(map[string]sessionUsage),
 	}
+}
+
+func (s *Service) GetCollectorScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error) {
+	if s.jdCollector == nil {
+		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
+	}
+	return s.jdCollector.GetScheduleConfig(ctx)
+}
+
+func (s *Service) UpdateCollectorScheduleConfig(ctx context.Context, req model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
+	if s.jdCollector == nil {
+		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
+	}
+	return s.jdCollector.UpdateScheduleConfig(ctx, req)
 }
 
 func newSeed(id, category, keyword, canonicalModel, brand string, aliases []string, priority int, enabled bool, notes string, now time.Time) model.KeywordSeed {

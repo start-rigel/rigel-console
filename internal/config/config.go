@@ -16,6 +16,7 @@ type Config struct {
 	LogLevel             string        `yaml:"log_level"`
 	FrontendMode         string        `yaml:"frontend_mode"`
 	BuildEngineBaseURL   string        `yaml:"build_engine_base_url"`
+	JDCollectorBaseURL   string        `yaml:"jd_collector_base_url"`
 	AdminUsername        string        `yaml:"admin_username"`
 	AdminPassword        string        `yaml:"admin_password"`
 	AdminCookieName      string        `yaml:"admin_cookie_name"`
@@ -33,6 +34,7 @@ type fileConfig struct {
 	LogLevel             string `yaml:"log_level"`
 	FrontendMode         string `yaml:"frontend_mode"`
 	BuildEngineBaseURL   string `yaml:"build_engine_base_url"`
+	JDCollectorBaseURL   string `yaml:"jd_collector_base_url"`
 	AdminUsername        string `yaml:"admin_username"`
 	AdminPassword        string `yaml:"admin_password"`
 	AdminCookieName      string `yaml:"admin_cookie_name"`
@@ -79,6 +81,7 @@ func Load(path string) (Config, error) {
 		LogLevel:             blankFallback(raw.LogLevel, "info"),
 		FrontendMode:         blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:   blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
+		JDCollectorBaseURL:   blankFallback(raw.JDCollectorBaseURL, "http://rigel-jd-collector:18081"),
 		AdminUsername:        blankFallback(raw.AdminUsername, "admin"),
 		AdminPassword:        blankFallback(raw.AdminPassword, "admin123456"),
 		AdminCookieName:      blankFallback(raw.AdminCookieName, "rigel_admin_session"),

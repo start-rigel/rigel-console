@@ -109,3 +109,27 @@ export interface KeywordSeedImportResponse {
   failed_count: number;
   errors?: KeywordSeedImportError[];
 }
+
+export interface CollectorScheduleConfig {
+  id: string;
+  service_name: string;
+  enabled: boolean;
+  schedule_time: string;
+  request_interval_seconds: number;
+  query_limit: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CollectorScheduleResponse {
+  configured: boolean;
+  service_name?: string;
+  config?: CollectorScheduleConfig;
+}
+
+export interface CollectorScheduleUpsertRequest {
+  enabled: boolean;
+  schedule_time: string;
+  request_interval_seconds: number;
+  query_limit: number;
+}

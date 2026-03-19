@@ -171,3 +171,27 @@ type KeywordSeedImportResponse struct {
 	FailedCount   int                      `json:"failed_count"`
 	Errors        []KeywordSeedImportError `json:"errors,omitempty"`
 }
+
+type CollectorScheduleConfig struct {
+	ID                     string    `json:"id"`
+	ServiceName            string    `json:"service_name"`
+	Enabled                bool      `json:"enabled"`
+	ScheduleTime           string    `json:"schedule_time"`
+	RequestIntervalSeconds int       `json:"request_interval_seconds"`
+	QueryLimit             int       `json:"query_limit"`
+	CreatedAt              time.Time `json:"created_at,omitempty"`
+	UpdatedAt              time.Time `json:"updated_at,omitempty"`
+}
+
+type CollectorScheduleResponse struct {
+	Configured  bool                    `json:"configured"`
+	ServiceName string                  `json:"service_name,omitempty"`
+	Config      CollectorScheduleConfig `json:"config"`
+}
+
+type CollectorScheduleUpsertRequest struct {
+	Enabled                bool   `json:"enabled"`
+	ScheduleTime           string `json:"schedule_time"`
+	RequestIntervalSeconds int    `json:"request_interval_seconds"`
+	QueryLimit             int    `json:"query_limit"`
+}

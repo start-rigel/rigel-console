@@ -11,6 +11,7 @@ import (
 )
 
 type buildClientStub struct{}
+type jdCollectorClientStub struct{}
 
 func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	return model.BuildEnginePriceCatalog{
@@ -39,8 +40,36 @@ func (buildClientStub) GenerateCatalogAdvice(context.Context, model.GenerateBuil
 	}, nil
 }
 
+func (jdCollectorClientStub) GetScheduleConfig(context.Context) (model.CollectorScheduleResponse, error) {
+	return model.CollectorScheduleResponse{
+		Configured: true,
+		Config: model.CollectorScheduleConfig{
+			ID:                     "cfg-1",
+			ServiceName:            "rigel-jd-collector",
+			Enabled:                true,
+			ScheduleTime:           "03:00",
+			RequestIntervalSeconds: 5,
+			QueryLimit:             10,
+		},
+	}, nil
+}
+
+func (jdCollectorClientStub) UpdateScheduleConfig(_ context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
+	return model.CollectorScheduleResponse{
+		Configured: true,
+		Config: model.CollectorScheduleConfig{
+			ID:                     "cfg-1",
+			ServiceName:            "rigel-jd-collector",
+			Enabled:                payload.Enabled,
+			ScheduleTime:           payload.ScheduleTime,
+			RequestIntervalSeconds: payload.RequestIntervalSeconds,
+			QueryLimit:             payload.QueryLimit,
+		},
+	}, nil
+}
+
 func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
-	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	req := model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}
 
 	first, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
@@ -60,7 +89,7 @@ func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 }
 
 func TestKeywordSeedCRUD(t *testing.T) {
-	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	item, err := service.CreateKeywordSeed(model.KeywordSeedUpsertRequest{
 		Category:       "cpu",
 		Keyword:        "Ryzen 7 7700",
@@ -92,7 +121,7 @@ func TestKeywordSeedCRUD(t *testing.T) {
 }
 
 func TestImportKeywordSeeds(t *testing.T) {
-	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
+	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	file := excelize.NewFile()
 	sheet := file.GetSheetName(0)
 	rows := [][]any{
@@ -116,6 +145,30 @@ func TestImportKeywordSeeds(t *testing.T) {
 	}
 	if result.ImportedCount != 1 {
 		t.Fatalf("expected imported count 1, got %d", result.ImportedCount)
+	}
+}
+
+func TestCollectorScheduleProxy(t *testing.T) {
+	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
+	cfg, err := service.GetCollectorScheduleConfig(context.Background())
+	if err != nil {
+		t.Fatalf("GetCollectorScheduleConfig() error = %v", err)
+	}
+	if !cfg.Configured || cfg.Config.ServiceName != "rigel-jd-collector" {
+		t.Fatalf("unexpected schedule config: %+v", cfg)
+	}
+
+	updated, err := service.UpdateCollectorScheduleConfig(context.Background(), model.CollectorScheduleUpsertRequest{
+		Enabled:                false,
+		ScheduleTime:           "04:30",
+		RequestIntervalSeconds: 12,
+		QueryLimit:             20,
+	})
+	if err != nil {
+		t.Fatalf("UpdateCollectorScheduleConfig() error = %v", err)
+	}
+	if updated.Config.Enabled || updated.Config.ScheduleTime != "04:30" || updated.Config.QueryLimit != 20 {
+		t.Fatalf("unexpected updated config: %+v", updated)
 	}
 }
 

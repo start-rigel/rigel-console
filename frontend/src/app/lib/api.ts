@@ -2,6 +2,8 @@ import type {
   AdminLoginResponse,
   AnonymousSessionResponse,
   CatalogRecommendationResponse,
+  CollectorScheduleResponse,
+  CollectorScheduleUpsertRequest,
   GenerateBuildRequest,
   KeywordSeed,
   KeywordSeedImportResponse,
@@ -116,5 +118,17 @@ export function importKeywordSeeds(file: File) {
   return requestJSON<KeywordSeedImportResponse>('/admin/api/v1/keyword-seeds/import', {
     method: 'POST',
     body: formData,
+  });
+}
+
+export function getJDScheduleConfig() {
+  return requestJSON<CollectorScheduleResponse>('/admin/api/v1/jd/schedule');
+}
+
+export function updateJDScheduleConfig(payload: CollectorScheduleUpsertRequest) {
+  return requestJSON<CollectorScheduleResponse>('/admin/api/v1/jd/schedule', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
 }

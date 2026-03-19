@@ -20,6 +20,7 @@
 - 调用 `rigel-build-engine`
 - 展示推荐结果
 - 提供词库管理、导入导出和启停操作
+- 提供 JD 定时采集配置页面和后台代理接口
 
 ## 不负责什么
 
@@ -63,6 +64,9 @@
 - `POST /admin/login`
 - `POST /admin/logout`
 - `GET /admin`
+- `GET /admin/jd-schedule`
+- `GET /admin/api/v1/jd/schedule`
+- `PUT /admin/api/v1/jd/schedule`
 - `GET /admin/api/v1/keyword-seeds`
 - `POST /admin/api/v1/keyword-seeds`
 - `PUT /admin/api/v1/keyword-seeds/{id}`
@@ -130,7 +134,7 @@ npm run build
 
 说明：
 
-- React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
+- React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/jd-schedule`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
 - Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发
 - `npm run build` 后必须重新启动 `rigel-console`，新的内嵌页面产物才会生效
 - 前台与后台页面都支持本地日间 / 夜间主题切换，主题状态保存在浏览器本地

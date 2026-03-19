@@ -12,6 +12,7 @@ import (
 
 	"github.com/rigel-labs/rigel-console/internal/app"
 	"github.com/rigel-labs/rigel-console/internal/client/buildengine"
+	"github.com/rigel-labs/rigel-console/internal/client/jdcollector"
 	"github.com/rigel-labs/rigel-console/internal/config"
 	consoleservice "github.com/rigel-labs/rigel-console/internal/service/console"
 )
@@ -29,8 +30,10 @@ func main() {
 	defer stop()
 
 	buildClient := buildengine.New(cfg.BuildEngineBaseURL)
+	jdCollectorClient := jdcollector.New(cfg.JDCollectorBaseURL)
 	consoleService := consoleservice.New(
 		buildClient,
+		jdCollectorClient,
 		cfg.AdminUsername,
 		cfg.AdminPassword,
 		cfg.AnonymousHourlyLimit,

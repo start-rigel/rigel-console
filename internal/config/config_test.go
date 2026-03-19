@@ -23,4 +23,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.BuildEngineBaseURL == "" {
 		t.Fatal("expected build-engine base url")
 	}
+	if cfg.JDCollectorBaseURL == "" {
+		t.Fatal("expected jd-collector base url")
+	}
 }
