@@ -3,4 +3,7 @@ bin/
 coverage.out
 .env
 .cache/
+.gocache/
+.tmp/
+frontend/node_modules/
 server

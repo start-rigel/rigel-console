@@ -10,6 +10,7 @@
 
 - 提供匿名可直接使用的前台推荐页
 - 提供必须登录后访问的后台管理页
+- 维护 `frontend/` 下的 React + Vite 前端工程，并将构建产物内嵌进 Go 服务
 - 管理匿名会话和后台登录态
 - 接收用户输入
 - 调用 `rigel-build-engine`
@@ -63,6 +64,18 @@
 configs/config.yaml
 ```
 
+前端源码位于：
+
+```text
+frontend/
+```
+
+前端生产构建产物默认输出到：
+
+```text
+internal/app/web/dist
+```
+
 启动示例：
 
 ```bash
@@ -75,6 +88,35 @@ go run ./cmd/server -config ./configs/config.yaml
 - 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
 - 匿名冷却秒数：`60`
+
+## 前端开发与构建
+
+安装前端依赖：
+
+```bash
+cd frontend
+npm install
+```
+
+本地开发前端：
+
+```bash
+cd frontend
+npm run dev
+```
+
+构建并刷新 Go 内嵌静态资源：
+
+```bash
+cd frontend
+npm run build
+```
+
+说明：
+
+- React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
+- Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发
+- `npm run build` 后必须重新启动 `rigel-console`，新的内嵌页面产物才会生效
 
 ## 接口示例
 
@@ -251,6 +293,7 @@ curl -I http://localhost:18084/admin/keywords/import
 - 前台推荐页允许匿名直接访问
 - 后台管理页必须先登录
 - 前台和后台页面路由明确分离
+- 页面前端统一由 React 渲染，Go 侧只负责返回嵌入式 SPA 页面壳和 API
 
 ## 当前目标
 

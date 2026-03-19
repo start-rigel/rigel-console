@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	consoleservice "github.com/rigel-labs/rigel-console/internal/service/console"
 )
 
-//go:embed web/*.html
+//go:embed web/dist
 var webFS embed.FS
 
 type App struct {
@@ -29,6 +30,11 @@ func New(cfg config.Config, console *consoleservice.Service) *App {
 
 func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
+	staticFS, err := fs.Sub(webFS, "web/dist")
+	if err != nil {
+		panic(fmt.Sprintf("prepare embedded dist fs: %v", err))
+	}
+	mux.Handle("/assets/", http.FileServer(http.FS(staticFS)))
 	mux.HandleFunc("/healthz", a.handleHealth)
 	mux.HandleFunc("/api/v1/session/anonymous", a.handleAnonymousSession)
 	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
@@ -102,7 +108,7 @@ func (a *App) handleGenerateCatalogRecommendation(w http.ResponseWriter, r *http
 func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		a.servePage(w, "web/admin_login.html")
+		a.serveSPA(w)
 	case http.MethodPost:
 		var req model.AdminLoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -144,7 +150,7 @@ func (a *App) handleAdminHome(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdmin(w, r) {
 		return
 	}
-	a.servePage(w, "web/admin_home.html")
+	a.serveSPA(w)
 }
 
 func (a *App) handleAdminKeywords(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +161,7 @@ func (a *App) handleAdminKeywords(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdmin(w, r) {
 		return
 	}
-	a.servePage(w, "web/keywords.html")
+	a.serveSPA(w)
 }
 
 func (a *App) handleAdminKeywordForm(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +172,7 @@ func (a *App) handleAdminKeywordForm(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdmin(w, r) {
 		return
 	}
-	a.servePage(w, "web/keyword_form.html")
+	a.serveSPA(w)
 }
 
 func (a *App) handleAdminKeywordImportPage(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +183,7 @@ func (a *App) handleAdminKeywordImportPage(w http.ResponseWriter, r *http.Reques
 	if !a.requireAdmin(w, r) {
 		return
 	}
-	a.servePage(w, "web/keyword_import.html")
+	a.serveSPA(w)
 }
 
 func (a *App) handleAdminKeywordRoutes(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +191,7 @@ func (a *App) handleAdminKeywordRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/edit") {
-		a.servePage(w, "web/keyword_form.html")
+		a.serveSPA(w)
 		return
 	}
 	writeError(w, http.StatusNotFound, "not found")
@@ -358,7 +364,7 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not found")
 		return
 	}
-	a.servePage(w, "web/index.html")
+	a.serveSPA(w)
 }
 
 func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
@@ -392,8 +398,8 @@ func (a *App) setCookie(w http.ResponseWriter, name, value string, maxAge time.D
 	})
 }
 
-func (a *App) servePage(w http.ResponseWriter, name string) {
-	data, err := webFS.ReadFile(name)
+func (a *App) serveSPA(w http.ResponseWriter) {
+	data, err := webFS.ReadFile("web/dist/index.html")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
