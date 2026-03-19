@@ -120,6 +120,13 @@ go run ./cmd/server -config ./configs/config.yaml
 - 后台页面与后台 API 默认只允许私网 / VPN 来源访问
 - 匿名限流、冷却和推荐缓存优先写入 Redis；未配置 Redis 时回退到进程内存
 
+## 开发约束
+
+- `rigel-console` 默认是唯一公网入口；新增公开接口时，要先补匿名风控、冷却、缓存或挑战策略
+- 不要为了联调方便移除 `/admin` 的私网 / VPN 限制；如果需要改公网策略，必须先同步 `rigel-core`
+- 不要绕过 `build_engine_token` 直接请求 `rigel-build-engine` 高成本接口
+- 不要把真实挑战密钥、内部 token、后台真实口令写进仓库配置或 README 示例
+
 ## 前端开发与构建
 
 安装前端依赖：
