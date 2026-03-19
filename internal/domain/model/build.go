@@ -30,7 +30,7 @@ type CatalogRecommendationResponse struct {
 	Advice           BuildAdvice               `json:"advice"`
 	CatalogItemCount int                       `json:"catalog_item_count,omitempty"`
 	CatalogWarnings  []string                  `json:"catalog_warnings,omitempty"`
-	Selection        CatalogSelection          `json:"selection,omitempty"`
+	Selection        *CatalogSelection         `json:"selection,omitempty"`
 }
 
 type RequestStatus struct {

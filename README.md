@@ -63,6 +63,7 @@
 - `POST /admin/login`
 - `POST /admin/logout`
 - `GET /admin`
+- `GET /admin/settings`
 - `GET /admin/api/v1/keyword-seeds`
 - `POST /admin/api/v1/keyword-seeds`
 - `PUT /admin/api/v1/keyword-seeds/{id}`
@@ -71,6 +72,8 @@
 - `POST /admin/api/v1/keyword-seeds/import`
 - `GET /admin/api/v1/keyword-seeds/template`
 - `GET /admin/api/v1/keyword-seeds/export`
+- `GET /admin/api/v1/settings/system`
+- `PUT /admin/api/v1/settings/system`
 
 ## 配置方式
 
@@ -104,6 +107,7 @@ go run ./cmd/server -config ./configs/config.yaml
 - 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
 - 匿名冷却秒数：`60`
+- build-engine 后台 token：`build_engine_admin_token`（默认 `rigel-build-engine-admin-token`）
 
 ## 前端开发与构建
 
@@ -131,6 +135,7 @@ npm run build
 说明：
 
 - 如果上游 `build-engine` 返回 JSON 错误，`rigel-console` 会尽量把原始错误信息继续透传出来，方便直接定位是空价格目录、参数问题还是数据库问题
+- console 仅在调用 build-engine 后台设置接口时携带 `X-Rigel-Admin-Token`，普通推荐接口不会携带该头。
 
 - React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
 - Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发

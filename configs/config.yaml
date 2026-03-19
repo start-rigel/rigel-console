@@ -2,34 +2,14 @@ service_name: rigel-console
 http_port: "18084"
 log_level: debug
 frontend_mode: embedded
-postgres_dsn: postgres://rigel:rigel@postgres:5432/rigel?sslmode=disable
 build_engine_base_url: http://rigel-build-engine:18082
-build_engine_token: rigel-internal-dev-token
-jd_collector_base_url: http://rigel-jd-collector:18081
+build_engine_admin_token: rigel-build-engine-admin-token
 admin_username: admin
-admin_password: RigelAdmin!2026
+admin_password: admin123456
 admin_cookie_name: rigel_admin_session
-admin_csrf_cookie_name: rigel_admin_csrf
 anonymous_cookie_name: rigel_anonymous_id
 anonymous_hourly_limit: 5
-ip_hourly_limit: 20
-device_hourly_limit: 12
 cooldown_seconds: 60
-challenge_pass_seconds: 900
-session_ttl_seconds: 2592000
-redis_addr: redis:6379
-challenge_provider: ""
-challenge_site_key: ""
-challenge_secret: ""
-challenge_verify_url: https://challenges.cloudflare.com/turnstile/v0/siteverify
-trusted_proxy_cidrs: []
-admin_allowed_cidrs:
-  - 127.0.0.1/32
-  - ::1/128
-  - 10.0.0.0/8
-  - 172.16.0.0/12
-  - 192.168.0.0/16
-  - 100.64.0.0/10
 read_timeout: 5s
 write_timeout: 2m
 idle_timeout: 30s

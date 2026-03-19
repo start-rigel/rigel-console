@@ -12,9 +12,7 @@ import (
 
 	"github.com/rigel-labs/rigel-console/internal/app"
 	"github.com/rigel-labs/rigel-console/internal/client/buildengine"
-	"github.com/rigel-labs/rigel-console/internal/client/jdcollector"
 	"github.com/rigel-labs/rigel-console/internal/config"
-	"github.com/rigel-labs/rigel-console/internal/repository/postgres"
 	consoleservice "github.com/rigel-labs/rigel-console/internal/service/console"
 )
 
@@ -30,40 +28,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	buildClient := buildengine.New(cfg.BuildEngineBaseURL, cfg.BuildEngineToken)
-	jdCollectorClient := jdcollector.New(cfg.JDCollectorBaseURL)
-	keywordRepo, err := postgres.New(ctx, cfg.PostgresDSN)
-	if err != nil {
-		log.Fatalf("init postgres keyword repository: %v", err)
-	}
-	defer func() {
-		if err := keywordRepo.Close(); err != nil {
-			log.Printf("close postgres repository: %v", err)
-		}
-	}()
-	opts := []consoleservice.Option{
-		consoleservice.WithLimits(cfg.IPHourlyLimit, cfg.DeviceHourlyLimit),
-		consoleservice.WithChallengePassTTL(time.Duration(cfg.ChallengePassSeconds) * time.Second),
-		consoleservice.WithSessionTTL(time.Duration(cfg.SessionTTLSeconds) * time.Second),
-		consoleservice.WithChallengeVerifier(consoleservice.NewChallengeVerifier(cfg.ChallengeProvider, cfg.ChallengeVerifyURL, cfg.ChallengeSecret)),
-		consoleservice.WithKeywordSeedRepository(keywordRepo),
-		consoleservice.WithAdminPasswordHash(cfg.AdminPasswordHash),
-	}
-	if cfg.RedisAddr != "" {
-		store, err := consoleservice.NewRedisSecurityStore(cfg.RedisAddr)
-		if err != nil {
-			log.Fatalf("init redis security store: %v", err)
-		}
-		opts = append(opts, consoleservice.WithStore(store))
-	}
+	buildClient := buildengine.New(cfg.BuildEngineBaseURL, cfg.BuildEngineAdminToken)
 	consoleService := consoleservice.New(
 		buildClient,
-		jdCollectorClient,
 		cfg.AdminUsername,
 		cfg.AdminPassword,
 		cfg.AnonymousHourlyLimit,
 		time.Duration(cfg.CooldownSeconds)*time.Second,
-		opts...,
 	)
 	application := app.New(cfg, consoleService)
 	server := &http.Server{
