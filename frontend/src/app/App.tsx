@@ -107,7 +107,7 @@ export default function App() {
 }
 
 function RecommendationPage() {
-  useDocumentTitle('givezj8.cn · 匿名装机推荐');
+  useDocumentTitle('给我装机吧 · AI 装机推荐');
   const [form, setForm] = useState<PublicFormState>(defaultPublicForm);
   const [anonymousID, setAnonymousID] = useState('');
   const [remaining, setRemaining] = useState('-');
@@ -186,7 +186,7 @@ function RecommendationPage() {
     if (advice?.summary) {
       return advice.summary;
     }
-    return '价格目录返回后，这里会展示总价、推荐摘要和每个配件的选择依据。';
+    return '提交预算和用途后，这里会展示总价、配件清单、推荐理由和价格依据。';
   }, [advice?.summary, result?.catalog_warnings]);
 
   return (
@@ -201,9 +201,9 @@ function RecommendationPage() {
               <Sparkles className="size-5 text-white sm:size-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.34em] text-cyan-300/70 sm:text-xs">PC Configuration Console</p>
+              <p className="text-[10px] uppercase tracking-[0.34em] text-cyan-300/70 sm:text-xs">givezj8.cn</p>
               <h1 className="text-xl font-bold text-slate-50 sm:text-2xl">给我装机吧</h1>
-              <p className="text-xs text-slate-400 sm:text-sm">预算分配 · 性能取舍 · 配置解释</p>
+              <p className="text-xs text-slate-400 sm:text-sm">基于当前硬件价格，快速生成装机建议</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -218,30 +218,32 @@ function RecommendationPage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
             <div className="space-y-6">
               <section>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">匿名直接使用</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">无需注册，直接开始</p>
                 <h2 className="mt-3 max-w-3xl text-4xl leading-[0.92] text-slate-50 sm:text-5xl lg:text-6xl">
-                  用新界面承接真实价格目录和 AI 推荐结果。
+                  输入预算，直接拿到一套有价格依据的装机方案。
                 </h2>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-                  界面采用新的 React 视觉体系，但推荐请求、匿名配额、缓存命中和后台词库功能仍然接在项目原有接口上。
+                  我们先用当前京东硬件价格整理出型号级价格清单，再结合你的预算、用途和偏好，返回一套更容易理解的配置建议。
                 </p>
               </section>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <MetricCard icon={<Wallet className="size-4 text-cyan-300" />} label="剩余匿名 AI 次数" value={remaining} />
-                <MetricCard icon={<Gauge className="size-4 text-cyan-300" />} label="冷却时间" value={cooldown} />
-                <MetricCard
-                  icon={<ShieldCheck className="size-4 text-cyan-300" />}
-                  label="请求状态"
-                  value={requestStatus}
-                />
+                <MetricCard icon={<Wallet className="size-4 text-cyan-300" />} label="剩余免费推荐次数" value={remaining} />
+                <MetricCard icon={<Gauge className="size-4 text-cyan-300" />} label="当前冷却时间" value={cooldown} />
+                <MetricCard icon={<ShieldCheck className="size-4 text-cyan-300" />} label="当前状态" value={requestStatus} />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <TrustCard title="先看价格，再出建议" text="不是空口推荐，先基于当前硬件价格整理候选清单。" />
+                <TrustCard title="结果直接可读" text="会给你总价、配件清单、推荐理由和风险提示。" />
+                <TrustCard title="新手也能直接用" text="不需要先研究型号和参数，先填预算和用途就够。" />
               </div>
 
               <section className="rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-5 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-slate-50 sm:text-xl">告诉我你的预算和用途</h3>
+                  <h3 className="text-lg font-semibold text-slate-50 sm:text-xl">先填需求，再出结果</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    主要交互沿用目标页面布局，同时补上品牌偏好、特殊要求和补充说明，让原有推荐能力继续可用。
+                    首页只问你最关键的几项信息。预算和用途决定主方案，品牌偏好和补充说明用来收窄推荐方向。
                   </p>
                 </div>
 
@@ -284,8 +286,8 @@ function RecommendationPage() {
                   </div>
 
                   <div className="rounded-xl border border-cyan-300/24 bg-cyan-400/5 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
-                    <p className="text-sm font-medium text-slate-100">高级条件</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-400">这里补齐原项目已有的品牌偏好、特殊要求和补充说明。</p>
+                    <p className="text-sm font-medium text-slate-100">可选偏好</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-400">如果你只想快速拿一版方案，这一块可以先不填。</p>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       <Field label="CPU 品牌偏好">
                         <input
@@ -337,12 +339,12 @@ function RecommendationPage() {
               <section className="rounded-2xl border border-cyan-300/24 bg-slate-950/82 p-5 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.06)]">
                 <div className="flex items-center gap-2 text-slate-100">
                   <Info className="size-4 text-cyan-300" />
-                  <p className="font-semibold">部署原则</p>
+                  <p className="font-semibold">为什么这个结果值得看</p>
                 </div>
                 <div className="mt-3 space-y-2 text-sm text-slate-400">
-                  <p>• 价格目录来自现有后端链路，不再使用本地模拟数据。</p>
-                  <p>• 相同请求优先命中缓存，不重复消耗匿名 AI 次数。</p>
-                  <p>• 后台词库页已统一到这套 React 视觉体系，但仍走原有管理接口。</p>
+                  <p>• 推荐前会先整理当前硬件价格，不是凭空生成一套配置。</p>
+                  <p>• 相同请求优先命中缓存，避免重复消耗推荐次数。</p>
+                  <p>• 结果里会明确给出总价、配件项和理由，方便你快速判断是否适合自己。</p>
                 </div>
               </section>
             </div>
@@ -355,16 +357,16 @@ function RecommendationPage() {
 
         <section className="mx-auto mt-14 max-w-7xl rounded-[24px] border border-cyan-300/24 bg-slate-950/78 p-5 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)] sm:p-6">
           <div className="grid gap-4 md:grid-cols-3">
-            <InfoBlock title="你会拿到什么" text="一套真实的型号级价格清单结果，以及 AI 给出的结构化建议、风险和升级方向。" />
-            <InfoBlock title="建议怎么读" text="先看估算总价和警告，再看建议摘要，最后逐项确认 CPU、GPU、主板与存储的取舍。" />
-            <InfoBlock title="后台还能做什么" text="管理员仍然可以登录后台，维护词库、导入 Excel、启停词条和导出当前配置词库。" />
+            <InfoBlock title="你会看到什么" text="推荐摘要、总价、配件清单、价格依据，以及这套方案适合什么场景。" />
+            <InfoBlock title="先看哪几项" text="先看总价和摘要，再看 CPU、GPU、主板、内存这几项核心配件，再决定是否细调。" />
+            <InfoBlock title="如果结果不满意" text="可以改预算、用途或品牌偏好，快速再生成一版，不需要重新理解整套参数体系。" />
           </div>
         </section>
       </main>
 
       <footer className="mt-16 border-t border-cyan-400/10 bg-slate-950/70 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-slate-500">
-          <p>© 2026 givezj8.cn · 新前端接入真实推荐链路</p>
+          <p>© 2026 给我装机吧 · givezj8.cn · 基于当前硬件价格生成装机建议</p>
         </div>
       </footer>
     </div>
@@ -852,7 +854,7 @@ function ResultPanel({
           </div>
           <h3 className="mb-2 text-lg font-semibold text-slate-50 sm:text-xl">先生成一套靠谱方案</h3>
           <p className="mx-auto max-w-sm text-sm leading-6 text-slate-400 sm:text-base">
-            左侧填完后，这里会展示目录条目数、估算总价、顾问摘要和具体选中的配件列表。
+            左侧填完后，这里会展示总价、推荐摘要、配件清单和每个配件的价格依据。
           </p>
           {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
         </div>
@@ -873,7 +875,7 @@ function ResultPanel({
       </div>
 
       <section className="mt-5 rounded-xl border border-cyan-300/24 bg-cyan-400/4 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">顾问摘要</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">推荐摘要</p>
         <p className="mt-2 text-sm leading-7 text-slate-200">{summaryText}</p>
       </section>
 
@@ -1020,6 +1022,15 @@ function MetricCard({ icon, label, value }: { icon: ReactNode; label: string; va
         <span>{label}</span>
       </div>
       <p className="mt-4 text-2xl font-semibold text-slate-50">{value}</p>
+    </div>
+  );
+}
+
+function TrustCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl border border-cyan-300/20 bg-slate-950/82 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
+      <p className="text-sm font-semibold text-slate-100">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
     </div>
   );
 }
