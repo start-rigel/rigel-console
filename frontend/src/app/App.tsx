@@ -5,13 +5,11 @@ import {
   Database,
   Download,
   FileSpreadsheet,
-  Gauge,
-  Info,
   LogOut,
+  Minus,
   MonitorSmartphone,
+  Plus,
   Search,
-  Settings2,
-  ShieldCheck,
   Sparkles,
   Upload,
   Wallet,
@@ -80,6 +78,11 @@ const defaultKeywordForm: KeywordFormState = {
 };
 
 const categoryOptions = ['cpu', 'gpu', 'motherboard', 'ram', 'ssd', 'psu', 'case', 'cooler'];
+const publicUseCaseOptions = [
+  { value: 'gaming', label: '游戏' },
+  { value: 'office', label: '办公' },
+  { value: 'design', label: '设计 / 剪辑' },
+];
 
 export default function App() {
   const pathname = window.location.pathname;
@@ -112,7 +115,6 @@ function RecommendationPage() {
   const [anonymousID, setAnonymousID] = useState('');
   const [remaining, setRemaining] = useState('-');
   const [cooldown, setCooldown] = useState('0 秒');
-  const [sessionStatus, setSessionStatus] = useState('匿名会话初始化中');
   const [requestStatus, setRequestStatus] = useState('等待生成');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -128,11 +130,10 @@ function RecommendationPage() {
         setAnonymousID(session.anonymous_id);
         setRemaining(String(session.remaining_ai_requests ?? '-'));
         setCooldown(`${session.cooldown_seconds ?? 0} 秒`);
-        setSessionStatus(session.anonymous_id ? `匿名会话 ${session.anonymous_id}` : '匿名会话获取失败');
       })
       .catch(() => {
         if (!cancelled) {
-          setSessionStatus('匿名会话初始化失败');
+          setRequestStatus('匿名会话初始化失败');
         }
       });
     return () => {
@@ -195,7 +196,7 @@ function RecommendationPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,rgba(95,224,255,0.22),transparent_55%)]" />
 
       <header className="sticky top-0 z-20 border-b border-cyan-400/10 bg-slate-950/70 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-4">
+        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/10 p-2 shadow-[0_0_24px_rgba(95,224,255,0.12)]">
               <Sparkles className="size-5 text-white sm:size-6" />
@@ -207,123 +208,106 @@ function RecommendationPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill>{sessionStatus}</StatusPill>
             <NavLink href="/admin/login">后台管理</NavLink>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-5 sm:py-8">
-        <section className="mx-auto mb-8 max-w-7xl rounded-[28px] border border-cyan-300/28 bg-slate-950/78 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(130,220,255,0.08)] backdrop-blur sm:mb-10 sm:p-7">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
-            <div className="space-y-6">
+      <main className="container mx-auto px-4 py-4 sm:py-6 lg:h-[calc(100vh-81px)] lg:py-4">
+        <section className="mx-auto max-w-7xl rounded-[28px] border border-cyan-300/28 bg-slate-950/78 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(130,220,255,0.08)] backdrop-blur sm:p-6 lg:h-full lg:overflow-hidden">
+          <div className="grid gap-5 lg:h-full lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] lg:items-start">
+            <div className={scrollPanelClassName}>
               <section>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">无需注册，直接开始</p>
-                <h2 className="mt-3 max-w-3xl text-4xl leading-[0.92] text-slate-50 sm:text-5xl lg:text-6xl">
-                  输入预算，直接拿到一套有价格依据的装机方案。
+                <h2 className="mt-2 max-w-3xl text-xl leading-[1.08] text-slate-50 sm:text-2xl lg:text-[1.7rem]">
+                  输入预算，直接生成装机方案。
                 </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-                  我们先用当前京东硬件价格整理出型号级价格清单，再结合你的预算、用途和偏好，返回一套更容易理解的配置建议。
-                </p>
               </section>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <MetricCard icon={<Wallet className="size-4 text-cyan-300" />} label="剩余免费推荐次数" value={remaining} />
-                <MetricCard icon={<Gauge className="size-4 text-cyan-300" />} label="当前冷却时间" value={cooldown} />
-                <MetricCard icon={<ShieldCheck className="size-4 text-cyan-300" />} label="当前状态" value={requestStatus} />
+              <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                <span className="rounded-full border border-cyan-300/18 bg-cyan-400/8 px-3 py-1.5">基于当前京东硬件价格整理</span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <TrustCard title="先看价格，再出建议" text="不是空口推荐，先基于当前硬件价格整理候选清单。" />
-                <TrustCard title="结果直接可读" text="会给你总价、配件清单、推荐理由和风险提示。" />
-                <TrustCard title="新手也能直接用" text="不需要先研究型号和参数，先填预算和用途就够。" />
-              </div>
-
-              <section className="rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-5 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)]">
-                <div className="mb-6">
+              <section className="rounded-[24px] border border-cyan-300/24 bg-slate-950/82 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.26),inset_0_0_0_1px_rgba(130,220,255,0.06)] sm:p-5">
+                <div className="mb-4">
                   <h3 className="text-lg font-semibold text-slate-50 sm:text-xl">先填需求，再出结果</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    首页只问你最关键的几项信息。预算和用途决定主方案，品牌偏好和补充说明用来收窄推荐方向。
+                    先用预算和用途确定主方案，再用可选偏好把结果收窄到更适合你的方向。
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                   <Field label="预算 (¥)" icon={<Wallet className="size-4" />}>
-                    <input
-                      className={controlClassName}
-                      type="number"
-                      min="1000"
-                      step="100"
-                      value={form.budget}
-                      onChange={(event) => setForm((prev) => ({ ...prev, budget: event.target.value }))}
-                      required
-                    />
+                    <div className="flex items-center rounded-xl border border-cyan-300/18 bg-slate-900/72 focus-within:border-cyan-200/50">
+                      <button
+                        type="button"
+                        className="flex h-12 w-12 items-center justify-center border-r border-cyan-300/14 text-slate-300 transition hover:bg-white/5 hover:text-slate-50"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            budget: String(Math.max(1000, Number(prev.budget || '0') - 100)),
+                          }))
+                        }
+                      >
+                        <Minus className="size-4" />
+                      </button>
+                      <input
+                        className={`${controlClassName} rounded-none border-0 bg-transparent text-center [appearance:textfield] focus:border-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                        type="number"
+                        min="1000"
+                        step="100"
+                        value={form.budget}
+                        onChange={(event) => setForm((prev) => ({ ...prev, budget: event.target.value }))}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="flex h-12 w-12 items-center justify-center border-l border-cyan-300/14 text-slate-300 transition hover:bg-white/5 hover:text-slate-50"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            budget: String(Math.max(1000, Number(prev.budget || '0') + 100)),
+                          }))
+                        }
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                    </div>
                   </Field>
 
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-4">
                     <Field label="用途" icon={<MonitorSmartphone className="size-4" />}>
-                      <select
-                        className={controlClassName}
-                        value={form.useCase}
-                        onChange={(event) => setForm((prev) => ({ ...prev, useCase: event.target.value }))}
-                      >
-                        <option value="gaming">游戏</option>
-                        <option value="office">办公</option>
-                        <option value="design">设计 / 剪辑</option>
-                      </select>
-                    </Field>
-                    <Field label="装机模式" icon={<Settings2 className="size-4" />}>
-                      <select
-                        className={controlClassName}
-                        value={form.buildMode}
-                        onChange={(event) => setForm((prev) => ({ ...prev, buildMode: event.target.value }))}
-                      >
-                        <option value="mixed">混合来源</option>
-                        <option value="new_only">只看全新</option>
-                        <option value="used_only">只看二手</option>
-                      </select>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        {publicUseCaseOptions.map((option) => {
+                          const active = form.useCase === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`h-12 rounded-xl border px-4 text-sm font-medium transition ${
+                                active
+                                  ? 'border-cyan-200/60 bg-cyan-300/18 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.12)]'
+                                  : 'border-cyan-300/18 bg-slate-900/72 text-slate-300 hover:border-cyan-200/35 hover:text-slate-100'
+                              }`}
+                              onClick={() => setForm((prev) => ({ ...prev, useCase: option.value }))}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </Field>
                   </div>
 
                   <div className="rounded-xl border border-cyan-300/24 bg-cyan-400/5 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
-                    <p className="text-sm font-medium text-slate-100">可选偏好</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-400">如果你只想快速拿一版方案，这一块可以先不填。</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <Field label="CPU 品牌偏好">
-                        <input
-                          className={controlClassName}
-                          placeholder="AMD / Intel"
-                          value={form.cpuBrand}
-                          onChange={(event) => setForm((prev) => ({ ...prev, cpuBrand: event.target.value }))}
-                        />
-                      </Field>
-                      <Field label="GPU 品牌偏好">
-                        <input
-                          className={controlClassName}
-                          placeholder="NVIDIA / AMD"
-                          value={form.gpuBrand}
-                          onChange={(event) => setForm((prev) => ({ ...prev, gpuBrand: event.target.value }))}
-                        />
-                      </Field>
-                    </div>
-                    <div className="mt-4 space-y-4">
-                      <Field label="特殊要求">
-                        <input
-                          className={controlClassName}
-                          placeholder="wifi_motherboard, low_noise"
-                          value={form.specialRequirements}
-                          onChange={(event) => setForm((prev) => ({ ...prev, specialRequirements: event.target.value }))}
-                        />
-                      </Field>
-                      <Field label="补充说明">
-                        <textarea
-                          className={`${fieldClassName} min-h-28 resize-y px-4 py-3`}
-                          placeholder="例如：1080p 游戏为主，希望价格稳一点。"
-                          value={form.notes}
-                          onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                        />
-                      </Field>
-                    </div>
+                    <p className="text-sm font-medium text-slate-100">补充说明</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-400">有额外要求再写，没有可以留空。</p>
+                    <textarea
+                      className={`${fieldClassName} mt-3 min-h-24 resize-y px-4 py-3`}
+                      placeholder="例如：1080p 游戏为主，希望价格稳一点。"
+                      value={form.notes}
+                      onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                    />
                   </div>
 
                   <button
@@ -333,38 +317,22 @@ function RecommendationPage() {
                   >
                     {isLoading ? '生成中...' : '生成配置方案'}
                   </button>
-                </form>
-              </section>
 
-              <section className="rounded-2xl border border-cyan-300/24 bg-slate-950/82 p-5 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.06)]">
-                <div className="flex items-center gap-2 text-slate-100">
-                  <Info className="size-4 text-cyan-300" />
-                  <p className="font-semibold">为什么这个结果值得看</p>
-                </div>
-                <div className="mt-3 space-y-2 text-sm text-slate-400">
-                  <p>• 推荐前会先整理当前硬件价格，不是凭空生成一套配置。</p>
-                  <p>• 相同请求优先命中缓存，避免重复消耗推荐次数。</p>
-                  <p>• 结果里会明确给出总价、配件项和理由，方便你快速判断是否适合自己。</p>
-                </div>
+                  <p className="text-xs text-slate-500">
+                    {requestStatus} · 剩余次数 {remaining} · 冷却 {cooldown}
+                  </p>
+                </form>
               </section>
             </div>
 
-            <section>
-              <ResultPanel result={result} summaryText={summaryText} selectedItems={selectedItems} error={error} />
-            </section>
-          </div>
-        </section>
-
-        <section className="mx-auto mt-14 max-w-7xl rounded-[24px] border border-cyan-300/24 bg-slate-950/78 p-5 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)] sm:p-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <InfoBlock title="你会看到什么" text="推荐摘要、总价、配件清单、价格依据，以及这套方案适合什么场景。" />
-            <InfoBlock title="先看哪几项" text="先看总价和摘要，再看 CPU、GPU、主板、内存这几项核心配件，再决定是否细调。" />
-            <InfoBlock title="如果结果不满意" text="可以改预算、用途或品牌偏好，快速再生成一版，不需要重新理解整套参数体系。" />
+              <section className={scrollPanelClassName}>
+                <ResultPanel result={result} summaryText={summaryText} selectedItems={selectedItems} error={error} />
+              </section>
           </div>
         </section>
       </main>
 
-      <footer className="mt-16 border-t border-cyan-400/10 bg-slate-950/70 backdrop-blur-sm">
+      <footer className="border-t border-cyan-400/10 bg-slate-950/70 backdrop-blur-sm lg:hidden">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-slate-500">
           <p>© 2026 给我装机吧 · givezj8.cn · 基于当前硬件价格生成装机建议</p>
         </div>
@@ -1044,42 +1012,12 @@ function AdminFeatureCard({
   );
 }
 
-function MetricCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-cyan-300/20 bg-slate-950/82 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <p className="mt-4 text-2xl font-semibold text-slate-50">{value}</p>
-    </div>
-  );
-}
-
 function HighlightCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <div className="rounded-2xl border border-cyan-300/20 bg-slate-900/74 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.04)]">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/72">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-slate-50">{value}</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">{hint}</p>
-    </div>
-  );
-}
-
-function TrustCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-2xl border border-cyan-300/20 bg-slate-950/82 p-4 shadow-[inset_0_0_0_1px_rgba(130,220,255,0.05)]">
-      <p className="text-sm font-semibold text-slate-100">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-    </div>
-  );
-}
-
-function InfoBlock({ title, text }: { title: string; text: string }) {
-  return (
-    <div>
-      <p className="text-sm font-semibold text-slate-100">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
     </div>
   );
 }
@@ -1119,6 +1057,8 @@ const fieldClassName =
   'w-full rounded-xl border border-cyan-300/18 bg-slate-900/72 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-200/50';
 
 const controlClassName = `${fieldClassName} h-12 px-4`;
+const scrollPanelClassName =
+  'space-y-4 lg:h-full lg:overflow-auto lg:pr-2 [scrollbar-width:thin] [scrollbar-color:rgba(103,232,249,0.28)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-cyan-300/25';
 
 const secondaryButtonClassName =
   'inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-200/40 hover:text-slate-50';

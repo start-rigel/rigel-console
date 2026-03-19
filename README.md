@@ -33,9 +33,12 @@
 
 - 预算
 - 用途
-- 品牌偏好
-- 特殊要求
 - 补充说明
+
+当前首页默认不再让用户显式选择品牌偏好和装机模式：
+
+- `build_mode` 固定使用默认值
+- `brand_preference` 和 `special_requirements` 由后端接受，但不作为首页第一版显式输入项
 
 ## 当前输出
 
@@ -182,13 +185,6 @@ curl -X POST http://localhost:18084/catalog/recommend \
     "budget": 6000,
     "use_case": "gaming",
     "build_mode": "mixed",
-    "brand_preference": {
-      "cpu": "amd",
-      "gpu": "nvidia"
-    },
-    "special_requirements": [
-      "wifi_motherboard"
-    ],
     "notes": "1080p 游戏为主，希望整机尽量均衡"
   }'
 ```
