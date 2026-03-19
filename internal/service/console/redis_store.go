@@ -70,6 +70,21 @@ func (s *redisSecurityStore) SetChallengePass(ctx context.Context, key string, t
 	return err
 }
 
+func (s *redisSecurityStore) LoadAdminSession(ctx context.Context, key string) (adminSession, bool, error) {
+	var session adminSession
+	ok, err := s.loadJSON(ctx, "admin_session:"+key, &session)
+	return session, ok, err
+}
+
+func (s *redisSecurityStore) SaveAdminSession(ctx context.Context, key string, value adminSession, ttl time.Duration) error {
+	return s.saveJSON(ctx, "admin_session:"+key, value, ttl)
+}
+
+func (s *redisSecurityStore) DeleteAdminSession(ctx context.Context, key string) error {
+	_, err := s.execute(ctx, []string{"DEL", "admin_session:" + key})
+	return err
+}
+
 func (s *redisSecurityStore) ping(ctx context.Context) error {
 	reply, err := s.execute(ctx, []string{"PING"})
 	if err != nil {

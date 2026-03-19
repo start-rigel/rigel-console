@@ -10,6 +10,7 @@ import type {
   KeywordSeedImportResponse,
   KeywordSeedListResponse,
   KeywordSeedUpsertRequest,
+  PublicBootstrapResponse,
 } from './types';
 
 const fingerprintStorageKey = 'givezj8-device-fingerprint';
@@ -39,9 +40,17 @@ async function parseJSON<T>(response: Response): Promise<T> {
 }
 
 async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (shouldAttachCSRF(input, init?.method)) {
+    const csrfToken = getCookie('rigel_admin_csrf');
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
+    }
+  }
   const response = await fetch(input, {
     credentials: 'same-origin',
     ...init,
+    headers,
   });
   if (!response.ok) {
     let message = `请求失败 (${response.status})`;
@@ -64,6 +73,10 @@ async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Pro
     throw new APIError(message, response.status, cooldownSeconds, challengeRequired, riskLevel);
   }
   return parseJSON<T>(response);
+}
+
+export function getPublicBootstrap() {
+  return requestJSON<PublicBootstrapResponse>('/api/v1/bootstrap');
 }
 
 export function getAnonymousSession() {
@@ -175,6 +188,20 @@ function getDeviceFingerprint() {
   const generated = `fp_${hashString(payload)}_${Math.random().toString(36).slice(2, 10)}`;
   window.localStorage.setItem(fingerprintStorageKey, generated);
   return generated;
+}
+
+function shouldAttachCSRF(input: RequestInfo | URL, method?: string) {
+  const normalizedMethod = (method ?? 'GET').toUpperCase();
+  if (normalizedMethod === 'GET' || normalizedMethod === 'HEAD') {
+    return false;
+  }
+  const target = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
+  return target.startsWith('/admin/');
+}
+
+function getCookie(name: string) {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
 }
 
 function hashString(input: string) {

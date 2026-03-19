@@ -128,6 +128,11 @@ type ChallengeVerifyResponse struct {
 	RiskLevel            string `json:"risk_level,omitempty"`
 }
 
+type PublicBootstrapResponse struct {
+	ChallengeProvider string `json:"challenge_provider,omitempty"`
+	ChallengeSiteKey  string `json:"challenge_site_key,omitempty"`
+}
+
 type KeywordSeed struct {
 	ID             string    `json:"id"`
 	Category       string    `json:"category"`

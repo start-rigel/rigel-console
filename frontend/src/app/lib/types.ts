@@ -37,6 +37,11 @@ export interface ChallengeVerifyResponse {
   risk_level?: string;
 }
 
+export interface PublicBootstrapResponse {
+  challenge_provider?: string;
+  challenge_site_key?: string;
+}
+
 export interface CatalogRecommendationItem {
   category: string;
   display_name: string;

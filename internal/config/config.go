@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -15,12 +16,15 @@ type Config struct {
 	HTTPPort             string        `yaml:"http_port"`
 	LogLevel             string        `yaml:"log_level"`
 	FrontendMode         string        `yaml:"frontend_mode"`
+	PostgresDSN          string        `yaml:"postgres_dsn"`
 	BuildEngineBaseURL   string        `yaml:"build_engine_base_url"`
 	BuildEngineToken     string        `yaml:"build_engine_token"`
 	JDCollectorBaseURL   string        `yaml:"jd_collector_base_url"`
 	AdminUsername        string        `yaml:"admin_username"`
 	AdminPassword        string        `yaml:"admin_password"`
+	AdminPasswordHash    string        `yaml:"admin_password_hash"`
 	AdminCookieName      string        `yaml:"admin_cookie_name"`
+	AdminCSRFCookieName  string        `yaml:"admin_csrf_cookie_name"`
 	AnonymousCookieName  string        `yaml:"anonymous_cookie_name"`
 	AnonymousHourlyLimit int           `yaml:"anonymous_hourly_limit"`
 	IPHourlyLimit        int           `yaml:"ip_hourly_limit"`
@@ -30,6 +34,7 @@ type Config struct {
 	SessionTTLSeconds    int           `yaml:"session_ttl_seconds"`
 	RedisAddr            string        `yaml:"redis_addr"`
 	ChallengeProvider    string        `yaml:"challenge_provider"`
+	ChallengeSiteKey     string        `yaml:"challenge_site_key"`
 	ChallengeSecret      string        `yaml:"challenge_secret"`
 	ChallengeVerifyURL   string        `yaml:"challenge_verify_url"`
 	TrustedProxyCIDRs    []string      `yaml:"trusted_proxy_cidrs"`
@@ -44,12 +49,15 @@ type fileConfig struct {
 	HTTPPort             string   `yaml:"http_port"`
 	LogLevel             string   `yaml:"log_level"`
 	FrontendMode         string   `yaml:"frontend_mode"`
+	PostgresDSN          string   `yaml:"postgres_dsn"`
 	BuildEngineBaseURL   string   `yaml:"build_engine_base_url"`
 	BuildEngineToken     string   `yaml:"build_engine_token"`
 	JDCollectorBaseURL   string   `yaml:"jd_collector_base_url"`
 	AdminUsername        string   `yaml:"admin_username"`
 	AdminPassword        string   `yaml:"admin_password"`
+	AdminPasswordHash    string   `yaml:"admin_password_hash"`
 	AdminCookieName      string   `yaml:"admin_cookie_name"`
+	AdminCSRFCookieName  string   `yaml:"admin_csrf_cookie_name"`
 	AnonymousCookieName  string   `yaml:"anonymous_cookie_name"`
 	AnonymousHourlyLimit int      `yaml:"anonymous_hourly_limit"`
 	IPHourlyLimit        int      `yaml:"ip_hourly_limit"`
@@ -59,6 +67,7 @@ type fileConfig struct {
 	SessionTTLSeconds    int      `yaml:"session_ttl_seconds"`
 	RedisAddr            string   `yaml:"redis_addr"`
 	ChallengeProvider    string   `yaml:"challenge_provider"`
+	ChallengeSiteKey     string   `yaml:"challenge_site_key"`
 	ChallengeSecret      string   `yaml:"challenge_secret"`
 	ChallengeVerifyURL   string   `yaml:"challenge_verify_url"`
 	TrustedProxyCIDRs    []string `yaml:"trusted_proxy_cidrs"`
@@ -102,12 +111,15 @@ func Load(path string) (Config, error) {
 		HTTPPort:             blankFallback(raw.HTTPPort, "8080"),
 		LogLevel:             blankFallback(raw.LogLevel, "info"),
 		FrontendMode:         blankFallback(raw.FrontendMode, "embedded"),
+		PostgresDSN:          strings.TrimSpace(raw.PostgresDSN),
 		BuildEngineBaseURL:   blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
 		BuildEngineToken:     raw.BuildEngineToken,
 		JDCollectorBaseURL:   blankFallback(raw.JDCollectorBaseURL, "http://rigel-jd-collector:18081"),
-		AdminUsername:        blankFallback(raw.AdminUsername, "admin"),
-		AdminPassword:        blankFallback(raw.AdminPassword, "admin123456"),
+		AdminUsername:        strings.TrimSpace(raw.AdminUsername),
+		AdminPassword:        raw.AdminPassword,
+		AdminPasswordHash:    strings.TrimSpace(raw.AdminPasswordHash),
 		AdminCookieName:      blankFallback(raw.AdminCookieName, "rigel_admin_session"),
+		AdminCSRFCookieName:  blankFallback(raw.AdminCSRFCookieName, "rigel_admin_csrf"),
 		AnonymousCookieName:  blankFallback(raw.AnonymousCookieName, "rigel_anonymous_id"),
 		AnonymousHourlyLimit: intFallback(raw.AnonymousHourlyLimit, 5),
 		IPHourlyLimit:        intFallback(raw.IPHourlyLimit, 20),
@@ -115,9 +127,10 @@ func Load(path string) (Config, error) {
 		CooldownSeconds:      intFallback(raw.CooldownSeconds, 60),
 		ChallengePassSeconds: intFallback(raw.ChallengePassSeconds, 900),
 		SessionTTLSeconds:    intFallback(raw.SessionTTLSeconds, 2592000),
-		RedisAddr:            raw.RedisAddr,
-		ChallengeProvider:    raw.ChallengeProvider,
-		ChallengeSecret:      raw.ChallengeSecret,
+		RedisAddr:            strings.TrimSpace(raw.RedisAddr),
+		ChallengeProvider:    strings.TrimSpace(raw.ChallengeProvider),
+		ChallengeSiteKey:     strings.TrimSpace(raw.ChallengeSiteKey),
+		ChallengeSecret:      strings.TrimSpace(raw.ChallengeSecret),
 		ChallengeVerifyURL:   blankFallback(raw.ChallengeVerifyURL, "https://challenges.cloudflare.com/turnstile/v0/siteverify"),
 		TrustedProxyCIDRs:    append([]string(nil), raw.TrustedProxyCIDRs...),
 		AdminAllowedCIDRs:    normalizeCIDRDefaults(raw.AdminAllowedCIDRs),
@@ -127,6 +140,21 @@ func Load(path string) (Config, error) {
 	}
 	if cfg.HTTPPort == "" {
 		return Config{}, fmt.Errorf("RIGEL_HTTP_PORT must not be empty")
+	}
+	if cfg.PostgresDSN == "" {
+		return Config{}, fmt.Errorf("postgres_dsn must not be empty")
+	}
+	if cfg.AdminUsername == "" {
+		return Config{}, fmt.Errorf("admin_username must not be empty")
+	}
+	if cfg.AdminPasswordHash == "" && strings.TrimSpace(cfg.AdminPassword) == "" {
+		return Config{}, fmt.Errorf("admin_password_hash or admin_password must not be empty")
+	}
+	if cfg.AdminPassword == "admin123456" {
+		return Config{}, fmt.Errorf("admin_password must not use default weak password")
+	}
+	if cfg.BuildEngineToken == "" {
+		return Config{}, fmt.Errorf("build_engine_token must not be empty")
 	}
 	return cfg, nil
 }

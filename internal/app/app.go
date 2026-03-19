@@ -44,6 +44,7 @@ func (a *App) Handler() http.Handler {
 	}
 	mux.Handle("/assets/", http.FileServer(http.FS(staticFS)))
 	mux.HandleFunc("/healthz", a.handleHealth)
+	mux.HandleFunc("/api/v1/bootstrap", a.handleBootstrap)
 	mux.HandleFunc("/api/v1/session/anonymous", a.handleAnonymousSession)
 	mux.HandleFunc("/api/v1/challenge/verify", a.handleChallengeVerify)
 	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
@@ -67,6 +68,17 @@ func (a *App) Handler() http.Handler {
 
 func (a *App) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": a.cfg.ServiceName})
+}
+
+func (a *App) handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	writeJSON(w, http.StatusOK, model.PublicBootstrapResponse{
+		ChallengeProvider: a.cfg.ChallengeProvider,
+		ChallengeSiteKey:  a.cfg.ChallengeSiteKey,
+	})
 }
 
 func (a *App) handleAnonymousSession(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +198,13 @@ func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "invalid username or password")
 			return
 		}
-		a.setCookie(w, r, a.cfg.AdminCookieName, "ok", 12*time.Hour)
+		sessionID, csrfToken, err := a.console.CreateAdminSession(r.Context())
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		a.setCookie(w, r, a.cfg.AdminCookieName, sessionID, 12*time.Hour)
+		a.setCSRFCookie(w, r, csrfToken, 12*time.Hour)
 		writeJSON(w, http.StatusOK, model.AdminLoginResponse{Username: strings.TrimSpace(req.Username)})
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -202,12 +220,24 @@ func (a *App) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !a.requireAdminCSRF(w, r) {
+		return
+	}
+	_ = a.console.DeleteAdminSession(r.Context(), a.readCookie(r, a.cfg.AdminCookieName))
 	http.SetCookie(w, &http.Cookie{
 		Name:     a.cfg.AdminCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     a.cfg.AdminCSRFCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteLaxMode,
 	})
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -292,6 +322,9 @@ func (a *App) handleAdminJDSchedule(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, payload)
 	case http.MethodPut:
+		if !a.requireAdminCSRF(w, r) {
+			return
+		}
 		var req model.CollectorScheduleUpsertRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -325,14 +358,22 @@ func (a *App) handleAdminKeywordSeeds(w http.ResponseWriter, r *http.Request) {
 			enabled := strings.EqualFold(rawEnabled, "true")
 			filter.Enabled = &enabled
 		}
-		writeJSON(w, http.StatusOK, a.console.ListKeywordSeeds(filter))
+		payload, err := a.console.ListKeywordSeeds(r.Context(), filter)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, payload)
 	case http.MethodPost:
+		if !a.requireAdminCSRF(w, r) {
+			return
+		}
 		var req model.KeywordSeedUpsertRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid JSON body")
 			return
 		}
-		item, err := a.console.CreateKeywordSeed(req)
+		item, err := a.console.CreateKeywordSeed(r.Context(), req)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -358,19 +399,26 @@ func (a *App) handleAdminKeywordSeedItem(w http.ResponseWriter, r *http.Request)
 	if len(parts) == 1 {
 		switch r.Method {
 		case http.MethodGet:
-			item, ok := a.console.GetKeywordSeed(id)
+			item, ok, err := a.console.GetKeywordSeed(r.Context(), id)
+			if err != nil {
+				writeError(w, http.StatusBadGateway, err.Error())
+				return
+			}
 			if !ok {
 				writeError(w, http.StatusNotFound, "keyword seed not found")
 				return
 			}
 			writeJSON(w, http.StatusOK, item)
 		case http.MethodPut:
+			if !a.requireAdminCSRF(w, r) {
+				return
+			}
 			var req model.KeywordSeedUpsertRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid JSON body")
 				return
 			}
-			item, err := a.console.UpdateKeywordSeed(id, req)
+			item, err := a.console.UpdateKeywordSeed(r.Context(), id, req)
 			if err != nil {
 				status := http.StatusBadRequest
 				var notFound consoleservice.ErrNotFound
@@ -393,7 +441,10 @@ func (a *App) handleAdminKeywordSeedItem(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		item, err := a.console.SetKeywordSeedEnabled(id, true)
+		if !a.requireAdminCSRF(w, r) {
+			return
+		}
+		item, err := a.console.SetKeywordSeedEnabled(r.Context(), id, true)
 		if err != nil {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
@@ -404,7 +455,10 @@ func (a *App) handleAdminKeywordSeedItem(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		item, err := a.console.SetKeywordSeedEnabled(id, false)
+		if !a.requireAdminCSRF(w, r) {
+			return
+		}
+		item, err := a.console.SetKeywordSeedEnabled(r.Context(), id, false)
 		if err != nil {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
@@ -439,7 +493,7 @@ func (a *App) handleAdminExport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	content, err := a.console.ExportKeywordSeedsExcel()
+	content, err := a.console.ExportKeywordSeedsExcel(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -455,6 +509,9 @@ func (a *App) handleAdminImport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !a.requireAdminCSRF(w, r) {
+		return
+	}
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "file is required")
@@ -462,7 +519,7 @@ func (a *App) handleAdminImport(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	result, err := a.console.ImportKeywordSeeds(file)
+	result, err := a.console.ImportKeywordSeeds(r.Context(), file)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -483,7 +540,12 @@ func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 		writeError(w, http.StatusForbidden, "admin access is restricted to private network")
 		return false
 	}
-	if a.readCookie(r, a.cfg.AdminCookieName) == "ok" {
+	_, ok, err := a.console.ValidateAdminSession(r.Context(), a.readCookie(r, a.cfg.AdminCookieName))
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return false
+	}
+	if ok {
 		return true
 	}
 	if strings.HasPrefix(r.URL.Path, "/admin/api/") {
@@ -492,6 +554,25 @@ func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	}
 	http.Redirect(w, r, "/admin/login", http.StatusFound)
 	return false
+}
+
+func (a *App) requireAdminCSRF(w http.ResponseWriter, r *http.Request) bool {
+	session, ok, err := a.console.ValidateAdminSession(r.Context(), a.readCookie(r, a.cfg.AdminCookieName))
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return false
+	}
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "login required")
+		return false
+	}
+	headerToken := strings.TrimSpace(r.Header.Get("X-CSRF-Token"))
+	cookieToken := a.readCookie(r, a.cfg.AdminCSRFCookieName)
+	if headerToken == "" || cookieToken == "" || headerToken != cookieToken || headerToken != session.CSRFToken {
+		writeError(w, http.StatusForbidden, "invalid csrf token")
+		return false
+	}
+	return true
 }
 
 func (a *App) readCookie(r *http.Request, name string) string {
@@ -509,6 +590,17 @@ func (a *App) setCookie(w http.ResponseWriter, r *http.Request, name, value stri
 		Path:     "/",
 		MaxAge:   int(maxAge.Seconds()),
 		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (a *App) setCSRFCookie(w http.ResponseWriter, r *http.Request, value string, maxAge time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     a.cfg.AdminCSRFCookieName,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   int(maxAge.Seconds()),
 		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteLaxMode,
 	})

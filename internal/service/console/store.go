@@ -26,6 +26,9 @@ type securityStore interface {
 	SaveRecommendation(ctx context.Context, key string, value storedRecommendation, ttl time.Duration) error
 	HasChallengePass(ctx context.Context, key string) (bool, error)
 	SetChallengePass(ctx context.Context, key string, ttl time.Duration) error
+	LoadAdminSession(ctx context.Context, key string) (adminSession, bool, error)
+	SaveAdminSession(ctx context.Context, key string, value adminSession, ttl time.Duration) error
+	DeleteAdminSession(ctx context.Context, key string) error
 }
 
 type memorySecurityStore struct {
@@ -33,6 +36,7 @@ type memorySecurityStore struct {
 	usages          map[string]memoryValue[usageState]
 	recommendations map[string]memoryValue[storedRecommendation]
 	challengePasses map[string]time.Time
+	adminSessions   map[string]memoryValue[adminSession]
 }
 
 type memoryValue[T any] struct {
@@ -45,6 +49,7 @@ func newMemorySecurityStore() securityStore {
 		usages:          make(map[string]memoryValue[usageState]),
 		recommendations: make(map[string]memoryValue[storedRecommendation]),
 		challengePasses: make(map[string]time.Time),
+		adminSessions:   make(map[string]memoryValue[adminSession]),
 	}
 }
 
@@ -107,6 +112,31 @@ func (s *memorySecurityStore) SetChallengePass(_ context.Context, key string, tt
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.challengePasses[key] = time.Now().Add(ttl)
+	return nil
+}
+
+func (s *memorySecurityStore) LoadAdminSession(_ context.Context, key string) (adminSession, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	item, ok := s.adminSessions[key]
+	if !ok || expired(item.ExpiresAt) {
+		delete(s.adminSessions, key)
+		return adminSession{}, false, nil
+	}
+	return item.Value, true, nil
+}
+
+func (s *memorySecurityStore) SaveAdminSession(_ context.Context, key string, value adminSession, ttl time.Duration) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.adminSessions[key] = memoryValue[adminSession]{Value: value, ExpiresAt: time.Now().Add(ttl)}
+	return nil
+}
+
+func (s *memorySecurityStore) DeleteAdminSession(_ context.Context, key string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.adminSessions, key)
 	return nil
 }
 

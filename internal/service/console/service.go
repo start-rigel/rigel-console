@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/rigel-labs/rigel-console/internal/domain/model"
@@ -81,11 +80,28 @@ func WithSessionTTL(ttl time.Duration) Option {
 	}
 }
 
+func WithKeywordSeedRepository(repo KeywordSeedRepository) Option {
+	return func(s *Service) {
+		if repo != nil {
+			s.keywordSeeds = repo
+		}
+	}
+}
+
+func WithAdminPasswordHash(hash string) Option {
+	return func(s *Service) {
+		hash = strings.TrimSpace(hash)
+		if hash != "" {
+			s.adminPasswordHash = []byte(hash)
+		}
+	}
+}
+
 type Service struct {
 	buildClient       BuildEngineClient
 	jdCollector       JDCollectorClient
 	adminUsername     string
-	adminPassword     string
+	adminPasswordHash []byte
 	anonymousLimit    int
 	ipHourlyLimit     int
 	deviceHourlyLimit int
@@ -95,42 +111,30 @@ type Service struct {
 	sessionTTL        time.Duration
 	store             securityStore
 	challengeVerifier challengeVerifier
-
-	mu      sync.Mutex
-	seedSeq int
-	seeds   map[string]model.KeywordSeed
+	keywordSeeds      KeywordSeedRepository
 }
 
 func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration, opts ...Option) *Service {
-	if adminUsername == "" {
-		adminUsername = "admin"
-	}
-	if adminPassword == "" {
-		adminPassword = "admin123456"
-	}
 	if anonymousLimit <= 0 {
 		anonymousLimit = 5
 	}
 	if cooldownDuration <= 0 {
 		cooldownDuration = time.Minute
 	}
-
-	now := time.Now().UTC()
-	initialSeeds := []model.KeywordSeed{
-		newSeed("seed-1", "cpu", "Ryzen 5 7500F", "Ryzen 5 7500F", "AMD", []string{"7500F", "AMD 7500F"}, 100, true, "主流游戏 CPU", now),
-		newSeed("seed-2", "gpu", "RTX 4060", "RTX 4060", "NVIDIA", []string{"4060", "RTX4060"}, 100, true, "1080p 主流显卡", now),
-		newSeed("seed-3", "motherboard", "B650M", "B650M", "", []string{"B650", "AMD B650M"}, 90, true, "AM5 主流主板", now),
-	}
-	seeds := make(map[string]model.KeywordSeed, len(initialSeeds))
-	for _, seed := range initialSeeds {
-		seeds[seed.ID] = seed
+	var adminPasswordHash []byte
+	if strings.TrimSpace(adminPassword) != "" {
+		var err error
+		adminPasswordHash, err = hashAdminPassword(adminPassword)
+		if err != nil {
+			panic(fmt.Sprintf("hash admin password: %v", err))
+		}
 	}
 
 	service := &Service{
 		buildClient:       buildClient,
 		jdCollector:       jdCollector,
 		adminUsername:     adminUsername,
-		adminPassword:     adminPassword,
+		adminPasswordHash: adminPasswordHash,
 		anonymousLimit:    anonymousLimit,
 		ipHourlyLimit:     max(anonymousLimit*4, 20),
 		deviceHourlyLimit: max(anonymousLimit*2, 12),
@@ -140,12 +144,13 @@ func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUser
 		sessionTTL:        30 * 24 * time.Hour,
 		store:             newMemorySecurityStore(),
 		challengeVerifier: noopChallengeVerifier{},
-		seedSeq:           len(initialSeeds),
-		seeds:             seeds,
 	}
 
 	for _, opt := range opts {
 		opt(service)
+	}
+	if len(service.adminPasswordHash) == 0 {
+		panic("admin password hash is not configured")
 	}
 	return service
 }
@@ -162,22 +167,6 @@ func (s *Service) UpdateCollectorScheduleConfig(ctx context.Context, req model.C
 		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
 	}
 	return s.jdCollector.UpdateScheduleConfig(ctx, req)
-}
-
-func newSeed(id, category, keyword, canonicalModel, brand string, aliases []string, priority int, enabled bool, notes string, now time.Time) model.KeywordSeed {
-	return model.KeywordSeed{
-		ID:             id,
-		Category:       category,
-		Keyword:        keyword,
-		CanonicalModel: canonicalModel,
-		Brand:          brand,
-		Aliases:        aliases,
-		Priority:       priority,
-		Enabled:        enabled,
-		Notes:          notes,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}
 }
 
 func (s *Service) IssueAnonymousSession(ctx context.Context, meta RequestMeta) (model.AnonymousSessionResponse, error) {
@@ -207,10 +196,6 @@ func (s *Service) IssueAnonymousSession(ctx context.Context, meta RequestMeta) (
 		RiskLevel:               riskLevel,
 		SessionExpiresInSeconds: int(s.sessionTTL.Seconds()),
 	}, nil
-}
-
-func (s *Service) AuthenticateAdmin(username, password string) bool {
-	return username == s.adminUsername && password == s.adminPassword
 }
 
 func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, meta RequestMeta) (model.CatalogRecommendationResponse, error) {
@@ -315,146 +300,53 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 	return response, nil
 }
 
-func (s *Service) ListKeywordSeeds(filter model.KeywordSeedFilter) model.KeywordSeedListResponse {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	page := filter.Page
-	if page <= 0 {
-		page = 1
+func (s *Service) ListKeywordSeeds(ctx context.Context, filter model.KeywordSeedFilter) (model.KeywordSeedListResponse, error) {
+	if s.keywordSeeds == nil {
+		return model.KeywordSeedListResponse{}, fmt.Errorf("keyword seed repository is not configured")
 	}
-	pageSize := filter.PageSize
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-
-	items := make([]model.KeywordSeed, 0, len(s.seeds))
-	for _, item := range s.seeds {
-		if filter.Category != "" && !strings.EqualFold(item.Category, filter.Category) {
-			continue
-		}
-		if filter.Brand != "" && !strings.Contains(strings.ToLower(item.Brand), strings.ToLower(filter.Brand)) {
-			continue
-		}
-		if filter.Keyword != "" {
-			text := strings.ToLower(item.Keyword + " " + item.CanonicalModel + " " + strings.Join(item.Aliases, " "))
-			if !strings.Contains(text, strings.ToLower(filter.Keyword)) {
-				continue
-			}
-		}
-		if filter.Enabled != nil && item.Enabled != *filter.Enabled {
-			continue
-		}
-		items = append(items, item)
-	}
-
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].Priority != items[j].Priority {
-			return items[i].Priority > items[j].Priority
-		}
-		return items[i].UpdatedAt.After(items[j].UpdatedAt)
-	})
-
-	total := len(items)
-	start := (page - 1) * pageSize
-	if start > total {
-		start = total
-	}
-	end := start + pageSize
-	if end > total {
-		end = total
-	}
-
-	return model.KeywordSeedListResponse{
-		Items:    append([]model.KeywordSeed(nil), items[start:end]...),
-		Page:     page,
-		PageSize: pageSize,
-		Total:    total,
-	}
+	return s.keywordSeeds.ListKeywordSeeds(ctx, filter)
 }
 
-func (s *Service) GetKeywordSeed(id string) (model.KeywordSeed, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	item, ok := s.seeds[id]
-	return item, ok
+func (s *Service) GetKeywordSeed(ctx context.Context, id string) (model.KeywordSeed, bool, error) {
+	if s.keywordSeeds == nil {
+		return model.KeywordSeed{}, false, fmt.Errorf("keyword seed repository is not configured")
+	}
+	return s.keywordSeeds.GetKeywordSeed(ctx, id)
 }
 
-func (s *Service) CreateKeywordSeed(req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) CreateKeywordSeed(ctx context.Context, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now().UTC()
-	s.seedSeq++
-	id := fmt.Sprintf("seed-%d", s.seedSeq)
-	seed := model.KeywordSeed{
-		ID:             id,
-		Category:       strings.ToLower(strings.TrimSpace(req.Category)),
-		Keyword:        strings.TrimSpace(req.Keyword),
-		CanonicalModel: strings.TrimSpace(req.CanonicalModel),
-		Brand:          strings.TrimSpace(req.Brand),
-		Aliases:        normalizeAliases(req.Aliases),
-		Priority:       normalizePriority(req.Priority),
-		Enabled:        req.Enabled,
-		Notes:          strings.TrimSpace(req.Notes),
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	if s.keywordSeeds == nil {
+		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
 	}
-	s.seeds[id] = seed
-	return seed, nil
+	return s.keywordSeeds.CreateKeywordSeed(ctx, req)
 }
 
-func (s *Service) UpdateKeywordSeed(id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) UpdateKeywordSeed(ctx context.Context, id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	existing, ok := s.seeds[id]
-	if !ok {
-		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
+	if s.keywordSeeds == nil {
+		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
 	}
-	existing.Category = strings.ToLower(strings.TrimSpace(req.Category))
-	existing.Keyword = strings.TrimSpace(req.Keyword)
-	existing.CanonicalModel = strings.TrimSpace(req.CanonicalModel)
-	existing.Brand = strings.TrimSpace(req.Brand)
-	existing.Aliases = normalizeAliases(req.Aliases)
-	existing.Priority = normalizePriority(req.Priority)
-	existing.Enabled = req.Enabled
-	existing.Notes = strings.TrimSpace(req.Notes)
-	existing.UpdatedAt = time.Now().UTC()
-	s.seeds[id] = existing
-	return existing, nil
+	return s.keywordSeeds.UpdateKeywordSeed(ctx, id, req)
 }
 
-func (s *Service) SetKeywordSeedEnabled(id string, enabled bool) (model.KeywordSeed, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	item, ok := s.seeds[id]
-	if !ok {
-		return model.KeywordSeed{}, ErrNotFound{Resource: "keyword seed"}
+func (s *Service) SetKeywordSeedEnabled(ctx context.Context, id string, enabled bool) (model.KeywordSeed, error) {
+	if s.keywordSeeds == nil {
+		return model.KeywordSeed{}, fmt.Errorf("keyword seed repository is not configured")
 	}
-	item.Enabled = enabled
-	item.UpdatedAt = time.Now().UTC()
-	s.seeds[id] = item
-	return item, nil
+	return s.keywordSeeds.SetKeywordSeedEnabled(ctx, id, enabled)
 }
 
-func (s *Service) ExportKeywordSeedsExcel() ([]byte, error) {
-	s.mu.Lock()
-	items := make([]model.KeywordSeed, 0, len(s.seeds))
-	for _, item := range s.seeds {
-		items = append(items, item)
+func (s *Service) ExportKeywordSeedsExcel(ctx context.Context) ([]byte, error) {
+	list, err := s.ListKeywordSeeds(ctx, model.KeywordSeedFilter{Page: 1, PageSize: 10000})
+	if err != nil {
+		return nil, err
 	}
-	s.mu.Unlock()
-
+	items := append([]model.KeywordSeed(nil), list.Items...)
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	f := excelize.NewFile()
 	sheet := f.GetSheetName(0)
@@ -508,15 +400,15 @@ func (s *Service) TemplateWorkbook() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *Service) ImportKeywordSeeds(file multipart.File) (model.KeywordSeedImportResponse, error) {
+func (s *Service) ImportKeywordSeeds(ctx context.Context, file multipart.File) (model.KeywordSeedImportResponse, error) {
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return model.KeywordSeedImportResponse{}, fmt.Errorf("read upload: %w", err)
 	}
-	return s.importWorkbookBytes(content)
+	return s.importWorkbookBytes(ctx, content)
 }
 
-func (s *Service) importWorkbookBytes(content []byte) (model.KeywordSeedImportResponse, error) {
+func (s *Service) importWorkbookBytes(ctx context.Context, content []byte) (model.KeywordSeedImportResponse, error) {
 	workbook, err := excelize.OpenReader(bytes.NewReader(content))
 	if err != nil {
 		return model.KeywordSeedImportResponse{}, fmt.Errorf("open workbook: %w", err)
@@ -552,7 +444,7 @@ func (s *Service) importWorkbookBytes(content []byte) (model.KeywordSeedImportRe
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue
 		}
-		if _, err := s.CreateKeywordSeed(req); err != nil {
+		if _, err := s.CreateKeywordSeed(ctx, req); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue

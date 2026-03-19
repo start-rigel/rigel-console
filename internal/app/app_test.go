@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +18,10 @@ import (
 
 type buildClientStub struct{}
 type jdCollectorClientStub struct{}
+type keywordSeedRepoStub struct {
+	mu    sync.Mutex
+	items map[string]model.KeywordSeed
+}
 
 func (buildClientStub) GetPriceCatalog(context.Context, model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
 	return model.BuildEnginePriceCatalog{
@@ -72,15 +78,70 @@ func (jdCollectorClientStub) UpdateScheduleConfig(_ context.Context, payload mod
 	}, nil
 }
 
+func newKeywordSeedRepoStub() *keywordSeedRepoStub {
+	return &keywordSeedRepoStub{
+		items: map[string]model.KeywordSeed{
+			"seed-1": {ID: "seed-1", Category: "cpu", Keyword: "Ryzen 5 7500F", CanonicalModel: "Ryzen 5 7500F", Brand: "AMD", Enabled: true, Priority: 100},
+		},
+	}
+}
+
+func (r *keywordSeedRepoStub) ListKeywordSeeds(_ context.Context, filter model.KeywordSeedFilter) (model.KeywordSeedListResponse, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	items := make([]model.KeywordSeed, 0, len(r.items))
+	for _, item := range r.items {
+		if filter.Category != "" && !strings.EqualFold(filter.Category, item.Category) {
+			continue
+		}
+		items = append(items, item)
+	}
+	return model.KeywordSeedListResponse{Items: items, Page: 1, PageSize: 20, Total: len(items)}, nil
+}
+
+func (r *keywordSeedRepoStub) GetKeywordSeed(_ context.Context, id string) (model.KeywordSeed, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.items[id]
+	return item, ok, nil
+}
+
+func (r *keywordSeedRepoStub) CreateKeywordSeed(_ context.Context, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+	return model.KeywordSeed{ID: "seed-new", Category: req.Category, Keyword: req.Keyword, CanonicalModel: req.CanonicalModel, Brand: req.Brand, Enabled: req.Enabled, Priority: req.Priority}, nil
+}
+
+func (r *keywordSeedRepoStub) UpdateKeywordSeed(_ context.Context, id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+	return model.KeywordSeed{ID: id, Category: req.Category, Keyword: req.Keyword, CanonicalModel: req.CanonicalModel, Brand: req.Brand, Enabled: req.Enabled, Priority: req.Priority}, nil
+}
+
+func (r *keywordSeedRepoStub) SetKeywordSeedEnabled(_ context.Context, id string, enabled bool) (model.KeywordSeed, error) {
+	return model.KeywordSeed{ID: id, Category: "cpu", Keyword: "Ryzen 5 7500F", CanonicalModel: "Ryzen 5 7500F", Enabled: enabled, Priority: 100}, nil
+}
+
 func newTestApp() *App {
 	cfg := config.Config{
 		ServiceName:         "rigel-console",
 		AdminCookieName:     "rigel_admin_session",
+		AdminCSRFCookieName: "rigel_admin_csrf",
 		AnonymousCookieName: "rigel_anonymous_id",
 		AdminAllowedCIDRs:   []string{"192.0.2.0/24"},
+		ChallengeProvider:   "turnstile",
+		ChallengeSiteKey:    "site-key",
 	}
-	console := consoleservice.New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
+	console := consoleservice.New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute, consoleservice.WithKeywordSeedRepository(newKeywordSeedRepoStub()))
 	return New(cfg, console)
+}
+
+func adminCookies(t *testing.T, application *App) []*http.Cookie {
+	t.Helper()
+	sessionID, csrfToken, err := application.console.CreateAdminSession(context.Background())
+	if err != nil {
+		t.Fatalf("CreateAdminSession() error = %v", err)
+	}
+	return []*http.Cookie{
+		{Name: "rigel_admin_session", Value: sessionID},
+		{Name: "rigel_admin_csrf", Value: csrfToken},
+	}
 }
 
 func TestIndex(t *testing.T) {
@@ -116,7 +177,9 @@ func TestAdminKeywordsRequiresLogin(t *testing.T) {
 func TestAdminKeywordAPIWithLogin(t *testing.T) {
 	application := newTestApp()
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/keyword-seeds", nil)
-	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	for _, cookie := range adminCookies(t, application) {
+		req.AddCookie(cookie)
+	}
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -127,7 +190,9 @@ func TestAdminKeywordAPIWithLogin(t *testing.T) {
 func TestAdminJDScheduleAPIWithLogin(t *testing.T) {
 	application := newTestApp()
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/jd/schedule", nil)
-	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	for _, cookie := range adminCookies(t, application) {
+		req.AddCookie(cookie)
+	}
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

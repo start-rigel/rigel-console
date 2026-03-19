@@ -22,6 +22,7 @@ import {
   createKeywordSeed,
   generateRecommendation,
   getAnonymousSession,
+  getPublicBootstrap,
   getJDScheduleConfig,
   getKeywordSeed,
   importKeywordSeeds,
@@ -31,6 +32,7 @@ import {
   setKeywordSeedEnabled,
   updateJDScheduleConfig,
   updateKeywordSeed,
+  verifyChallenge,
 } from './lib/api';
 import type {
   CatalogRecommendationResponse,
@@ -39,6 +41,7 @@ import type {
   KeywordSeed,
   KeywordSeedImportResponse,
   KeywordSeedUpsertRequest,
+  PublicBootstrapResponse,
 } from './lib/types';
 
 type PublicFormState = {
@@ -91,6 +94,15 @@ const publicUseCaseOptions = [
 ];
 const themeStorageKey = 'givezj8-theme';
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void }) => string;
+      remove: (widgetID: string) => void;
+    };
+  }
+}
+
 export default function App() {
   const pathname = window.location.pathname;
   const editMatch = pathname.match(/^\/admin\/keywords\/([^/]+)\/edit$/);
@@ -128,11 +140,22 @@ function RecommendationPage() {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [requestStatus, setRequestStatus] = useState('等待生成');
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifyingChallenge, setIsVerifyingChallenge] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<CatalogRecommendationResponse | null>(null);
+  const [bootstrap, setBootstrap] = useState<PublicBootstrapResponse>({});
+  const [challengeToken, setChallengeToken] = useState('');
+  const [challengeVisible, setChallengeVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    getPublicBootstrap()
+      .then((payload) => {
+        if (!cancelled) {
+          setBootstrap(payload);
+        }
+      })
+      .catch(() => undefined);
     getAnonymousSession()
       .then((session) => {
         if (cancelled) {
@@ -141,6 +164,7 @@ function RecommendationPage() {
         setAnonymousID(session.anonymous_id);
         setRemaining(String(session.remaining_ai_requests ?? '-'));
         setCooldownSeconds(session.cooldown_seconds ?? 0);
+        setChallengeVisible(Boolean(session.challenge_required));
       })
       .catch(() => {
         if (!cancelled) {
@@ -199,11 +223,35 @@ function RecommendationPage() {
     } catch (err) {
       const message = err instanceof APIError ? err.message : '生成推荐失败';
       const cooldownSeconds = err instanceof APIError ? err.cooldownSeconds : 0;
+      if (err instanceof APIError && err.challengeRequired) {
+        setChallengeVisible(true);
+      }
       setError(message);
       setCooldownSeconds(cooldownSeconds);
       setRequestStatus(message);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleVerifyChallenge() {
+    if (!challengeToken.trim()) {
+      setError('请先完成安全验证。');
+      return;
+    }
+    setIsVerifyingChallenge(true);
+    setError('');
+    try {
+      await verifyChallenge(anonymousID, challengeToken.trim());
+      setChallengeVisible(false);
+      setChallengeToken('');
+      setRequestStatus('安全验证已通过，可以继续生成。');
+    } catch (err) {
+      const message = err instanceof APIError ? err.message : '安全验证失败';
+      setError(message);
+      setRequestStatus(message);
+    } finally {
+      setIsVerifyingChallenge(false);
     }
   }
 
@@ -343,14 +391,30 @@ function RecommendationPage() {
                   <button
                     type="submit"
                     className="app-submit-button flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-100"
-                    disabled={isLoading || cooldownSeconds > 0}
+                    disabled={isLoading || cooldownSeconds > 0 || challengeVisible}
                   >
-                    {isLoading ? '生成中...' : cooldownSeconds > 0 ? `冷却中 ${cooldownSeconds} 秒` : '生成配置方案'}
+                    {isLoading
+                      ? '生成中...'
+                      : challengeVisible
+                        ? '请先完成安全验证'
+                        : cooldownSeconds > 0
+                          ? `冷却中 ${cooldownSeconds} 秒`
+                          : '生成配置方案'}
                   </button>
 
                   <p className="text-xs text-slate-500">
                     {requestStatus} · 剩余次数 {remaining} · 冷却 {cooldownSeconds} 秒
                   </p>
+                  {challengeVisible ? (
+                    <ChallengePanel
+                      provider={bootstrap.challenge_provider}
+                      siteKey={bootstrap.challenge_site_key}
+                      token={challengeToken}
+                      onTokenChange={setChallengeToken}
+                      onVerify={handleVerifyChallenge}
+                      verifying={isVerifyingChallenge}
+                    />
+                  ) : null}
                 </form>
               </section>
             </div>
@@ -371,9 +435,94 @@ function RecommendationPage() {
   );
 }
 
+function ChallengePanel({
+  provider,
+  siteKey,
+  token,
+  onTokenChange,
+  onVerify,
+  verifying,
+}: {
+  provider?: string;
+  siteKey?: string;
+  token: string;
+  onTokenChange: (token: string) => void;
+  onVerify: () => void;
+  verifying: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-50">
+      <p className="font-semibold">当前请求需要先完成安全验证</p>
+      <p className="mt-2 leading-6 text-amber-100/80">
+        系统检测到当前请求风险较高，验证通过后才能继续触发高成本推荐。
+      </p>
+      {provider === 'turnstile' && siteKey ? (
+        <TurnstileWidget siteKey={siteKey} onToken={onTokenChange} />
+      ) : null}
+      <input
+        className={`${fieldClassName} mt-3 px-4 py-3`}
+        placeholder="挑战 token"
+        value={token}
+        onChange={(event) => onTokenChange(event.target.value)}
+      />
+      <button
+        type="button"
+        className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-amber-200 px-4 text-sm font-semibold text-slate-950 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:bg-amber-50"
+        onClick={onVerify}
+        disabled={verifying || !token.trim()}
+      >
+        {verifying ? '验证中...' : '验证后继续'}
+      </button>
+    </div>
+  );
+}
+
+function TurnstileWidget({ siteKey, onToken }: { siteKey: string; onToken: (token: string) => void }) {
+  useEffect(() => {
+    let widgetID = '';
+    let cancelled = false;
+
+    function mount() {
+      const container = document.getElementById('turnstile-container');
+      if (!container || !window.turnstile) {
+        return;
+      }
+      container.innerHTML = '';
+      widgetID = window.turnstile.render(container, {
+        sitekey: siteKey,
+        callback: (token) => {
+          if (!cancelled) {
+            onToken(token);
+          }
+        },
+      });
+    }
+
+    if (window.turnstile) {
+      mount();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.onload = mount;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      if (widgetID && window.turnstile) {
+        window.turnstile.remove(widgetID);
+      }
+    };
+  }, [onToken, siteKey]);
+
+  return <div id="turnstile-container" className="mt-3 min-h-16" />;
+}
+
 function AdminLoginPage() {
   useDocumentTitle('givezj8.cn · 后台登录');
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('等待登录');
   const [submitting, setSubmitting] = useState(false);

@@ -57,6 +57,7 @@
 ## 当前接口
 
 - `GET /healthz`
+- `GET /api/v1/bootstrap`
 - `GET /api/v1/session/anonymous`
 - `POST /api/v1/challenge/verify`
 - `POST /catalog/recommend`
@@ -105,20 +106,28 @@ go run ./cmd/server -config ./configs/config.yaml
 
 默认开发配置：
 
-- 后台用户名：`admin`
-- 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
 - 单 IP 小时额度：`20`
 - 单设备指纹小时额度：`12`
 - 匿名冷却秒数：`60`
 - 挑战通过放行秒数：`900`
 
+当前关键配置补充：
+
+- `postgres_dsn` 必填，词库管理直接读写 PostgreSQL 中的 `rigel_keyword_seeds`
+- `build_engine_token` 必填，`console -> build-engine` 默认强制走内部 token
+- 后台登录不再允许默认弱口令；至少要提供 `admin_password` 或 `admin_password_hash`
+- 推荐挑战如使用 Turnstile，需要同时配置 `challenge_provider=turnstile`、`challenge_site_key`、`challenge_secret`
+
 当前安全规则：
 
 - 前台推荐请求默认会附带设备指纹头 `X-Device-Fingerprint`
+- 前台会先读取 `/api/v1/bootstrap`，按后端下发的挑战配置决定是否渲染挑战组件
 - `rigel-console -> rigel-build-engine` 默认通过 `build_engine_token` 走内部 token 鉴权
 - 后台页面与后台 API 默认只允许私网 / VPN 来源访问
-- 匿名限流、冷却和推荐缓存优先写入 Redis；未配置 Redis 时回退到进程内存
+- 后台登录态改为服务端 session，不再使用固定值 cookie
+- 后台修改类接口默认要求 `X-CSRF-Token`
+- 词库 CRUD / 导入导出直接使用 PostgreSQL 真源，不再走进程内存
 
 ## 开发约束
 
