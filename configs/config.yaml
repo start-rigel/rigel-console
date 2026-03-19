@@ -3,7 +3,7 @@ http_port: "18084"
 log_level: debug
 frontend_mode: embedded
 build_engine_base_url: http://rigel-build-engine:18082
-build_engine_token: change-me-in-production
+build_engine_token: rigel-internal-dev-token
 jd_collector_base_url: http://rigel-jd-collector:18081
 admin_username: admin
 admin_password: admin123456

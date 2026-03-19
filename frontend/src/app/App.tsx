@@ -125,7 +125,7 @@ function RecommendationPage() {
   const [form, setForm] = useState<PublicFormState>(defaultPublicForm);
   const [anonymousID, setAnonymousID] = useState('');
   const [remaining, setRemaining] = useState('-');
-  const [cooldown, setCooldown] = useState('0 秒');
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [requestStatus, setRequestStatus] = useState('等待生成');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -140,7 +140,7 @@ function RecommendationPage() {
         }
         setAnonymousID(session.anonymous_id);
         setRemaining(String(session.remaining_ai_requests ?? '-'));
-        setCooldown(`${session.cooldown_seconds ?? 0} 秒`);
+        setCooldownSeconds(session.cooldown_seconds ?? 0);
       })
       .catch(() => {
         if (!cancelled) {
@@ -151,6 +151,24 @@ function RecommendationPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setCooldownSeconds((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [cooldownSeconds]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -176,13 +194,13 @@ function RecommendationPage() {
       const data = await generateRecommendation(payload, anonymousID);
       setResult(data);
       setRemaining(String(data.request_status.remaining_ai_requests ?? '-'));
-      setCooldown(`${data.request_status.cooldown_seconds ?? 0} 秒`);
+      setCooldownSeconds(data.request_status.cooldown_seconds ?? 0);
       setRequestStatus(data.request_status.cache_hit ? '已命中缓存' : '已生成新结果');
     } catch (err) {
       const message = err instanceof APIError ? err.message : '生成推荐失败';
       const cooldownSeconds = err instanceof APIError ? err.cooldownSeconds : 0;
       setError(message);
-      setCooldown(`${cooldownSeconds} 秒`);
+      setCooldownSeconds(cooldownSeconds);
       setRequestStatus(message);
     } finally {
       setIsLoading(false);
@@ -213,7 +231,7 @@ function RecommendationPage() {
               <Sparkles className="size-5 text-white sm:size-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.34em] text-cyan-300/70 sm:text-xs">givezj8.cn</p>
+              <p className="app-brand-mark text-[10px] uppercase tracking-[0.34em] text-cyan-300/70 sm:text-xs">givezj8.cn</p>
               <h1 className="text-xl font-bold text-slate-50 sm:text-2xl">给我装机吧</h1>
               <p className="text-xs text-slate-400 sm:text-sm">基于当前硬件价格，快速生成装机建议</p>
             </div>
@@ -230,7 +248,7 @@ function RecommendationPage() {
           <div className="grid gap-5 lg:h-full lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] lg:items-start">
             <div className={scrollPanelClassName}>
               <section>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">无需注册，直接开始</p>
+                <p className="app-kicker text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/72">无需注册，直接开始</p>
                 <h2 className="mt-2 max-w-3xl text-xl leading-[1.08] text-slate-50 sm:text-2xl lg:text-[1.7rem]">
                   输入预算，直接生成装机方案。
                 </h2>
@@ -325,13 +343,13 @@ function RecommendationPage() {
                   <button
                     type="submit"
                     className="app-submit-button flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-100"
-                    disabled={isLoading}
+                    disabled={isLoading || cooldownSeconds > 0}
                   >
-                    {isLoading ? '生成中...' : '生成配置方案'}
+                    {isLoading ? '生成中...' : cooldownSeconds > 0 ? `冷却中 ${cooldownSeconds} 秒` : '生成配置方案'}
                   </button>
 
                   <p className="text-xs text-slate-500">
-                    {requestStatus} · 剩余次数 {remaining} · 冷却 {cooldown}
+                    {requestStatus} · 剩余次数 {remaining} · 冷却 {cooldownSeconds} 秒
                   </p>
                 </form>
               </section>

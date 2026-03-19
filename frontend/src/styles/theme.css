@@ -252,6 +252,14 @@ html.light-theme .app-choice-button-active {
   color: #155e75 !important;
 }
 
+html.light-theme .app-brand-mark {
+  color: #0f5f78 !important;
+}
+
+html.light-theme .app-kicker {
+  color: #0b6b84 !important;
+}
+
 html.light-theme .app-scroll-panel {
   scrollbar-color: rgba(14, 165, 198, 0.28) transparent;
 }
