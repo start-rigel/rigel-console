@@ -93,6 +93,8 @@ const publicUseCaseOptions = [
   { value: 'design', label: '设计 / 剪辑' },
 ];
 const themeStorageKey = 'givezj8-theme';
+const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
+const minuteOptions = Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, '0'));
 
 declare global {
   interface Window {
@@ -999,6 +1001,8 @@ function JDSchedulePage() {
   const [status, setStatus] = useState('读取中');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [scheduleHour, setScheduleHour] = useState('03');
+  const [scheduleMinute, setScheduleMinute] = useState('00');
 
   useEffect(() => {
     let cancelled = false;
@@ -1009,12 +1013,15 @@ function JDSchedulePage() {
         }
         setConfigured(payload.configured);
         if (payload.config) {
+          const [hour, minute] = parseScheduleTime(payload.config.schedule_time);
           setForm({
             enabled: payload.config.enabled,
-            schedule_time: payload.config.schedule_time,
+            schedule_time: formatScheduleTime(hour, minute),
             request_interval_seconds: payload.config.request_interval_seconds,
             query_limit: payload.config.query_limit,
           });
+          setScheduleHour(hour);
+          setScheduleMinute(minute);
           setStatus(payload.config.enabled ? '当前已启用定时采集' : '当前已配置但未启用');
         } else {
           setStatus('当前未配置，不会自动启动定时采集');
@@ -1037,6 +1044,10 @@ function JDSchedulePage() {
     };
   }, []);
 
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, schedule_time: formatScheduleTime(scheduleHour, scheduleMinute) }));
+  }, [scheduleHour, scheduleMinute]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -1049,12 +1060,15 @@ function JDSchedulePage() {
       });
       setConfigured(payload.configured);
       if (payload.config) {
+        const [hour, minute] = parseScheduleTime(payload.config.schedule_time);
         setForm({
           enabled: payload.config.enabled,
-          schedule_time: payload.config.schedule_time,
+          schedule_time: formatScheduleTime(hour, minute),
           request_interval_seconds: payload.config.request_interval_seconds,
           query_limit: payload.config.query_limit,
         });
+        setScheduleHour(hour);
+        setScheduleMinute(minute);
       }
       setStatus(payload.config?.enabled ? '定时采集已启用并保存' : '定时采集配置已保存，但当前关闭');
     } catch (err) {
@@ -1101,13 +1115,30 @@ function JDSchedulePage() {
 
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label="每日执行时间">
-                  <input
-                    className={controlClassName}
-                    type="time"
-                    value={form.schedule_time}
-                    onChange={(event) => setForm((prev) => ({ ...prev, schedule_time: event.target.value }))}
-                    required
-                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <select
+                      className={controlClassName}
+                      value={scheduleHour}
+                      onChange={(event) => setScheduleHour(event.target.value)}
+                    >
+                      {hourOptions.map((hour) => (
+                        <option key={hour} value={hour}>
+                          {hour} 点
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className={controlClassName}
+                      value={scheduleMinute}
+                      onChange={(event) => setScheduleMinute(event.target.value)}
+                    >
+                      {minuteOptions.map((minute) => (
+                        <option key={minute} value={minute}>
+                          {minute} 分
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </Field>
                 <Field label="每次查询条数">
                   <input
@@ -1467,4 +1498,17 @@ function useDocumentTitle(title: string) {
   useEffect(() => {
     document.title = title;
   }, [title]);
+}
+
+function parseScheduleTime(value: string) {
+  const normalized = value.trim();
+  if (!/^\d{2}:\d{2}$/.test(normalized)) {
+    return ['03', '00'] as const;
+  }
+  const [hour, minute] = normalized.split(':');
+  return [hour, minute] as const;
+}
+
+function formatScheduleTime(hour: string, minute: string) {
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
 }
