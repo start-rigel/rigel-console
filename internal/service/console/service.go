@@ -30,34 +30,78 @@ type JDCollectorClient interface {
 	UpdateScheduleConfig(ctx context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error)
 }
 
-type cachedRecommendation struct {
-	response  model.CatalogRecommendationResponse
-	expiresAt time.Time
+type RequestMeta struct {
+	ClientIP          string
+	DeviceFingerprint string
+	AnonymousID       string
 }
 
-type sessionUsage struct {
-	WindowStarted time.Time
-	Used          int
-	CooldownUntil time.Time
+type Option func(*Service)
+
+func WithStore(store securityStore) Option {
+	return func(s *Service) {
+		if store != nil {
+			s.store = store
+		}
+	}
+}
+
+func WithChallengeVerifier(verifier challengeVerifier) Option {
+	return func(s *Service) {
+		if verifier != nil {
+			s.challengeVerifier = verifier
+		}
+	}
+}
+
+func WithLimits(ipHourlyLimit, deviceHourlyLimit int) Option {
+	return func(s *Service) {
+		if ipHourlyLimit > 0 {
+			s.ipHourlyLimit = ipHourlyLimit
+		}
+		if deviceHourlyLimit > 0 {
+			s.deviceHourlyLimit = deviceHourlyLimit
+		}
+	}
+}
+
+func WithChallengePassTTL(ttl time.Duration) Option {
+	return func(s *Service) {
+		if ttl > 0 {
+			s.challengePassTTL = ttl
+		}
+	}
+}
+
+func WithSessionTTL(ttl time.Duration) Option {
+	return func(s *Service) {
+		if ttl > 0 {
+			s.sessionTTL = ttl
+		}
+	}
 }
 
 type Service struct {
-	buildClient      BuildEngineClient
-	jdCollector      JDCollectorClient
-	adminUsername    string
-	adminPassword    string
-	anonymousLimit   int
-	cooldownDuration time.Duration
-	cacheTTL         time.Duration
+	buildClient       BuildEngineClient
+	jdCollector       JDCollectorClient
+	adminUsername     string
+	adminPassword     string
+	anonymousLimit    int
+	ipHourlyLimit     int
+	deviceHourlyLimit int
+	cooldownDuration  time.Duration
+	cacheTTL          time.Duration
+	challengePassTTL  time.Duration
+	sessionTTL        time.Duration
+	store             securityStore
+	challengeVerifier challengeVerifier
 
-	mu             sync.Mutex
-	seedSeq        int
-	seeds          map[string]model.KeywordSeed
-	recommendCache map[string]cachedRecommendation
-	anonymousUsage map[string]sessionUsage
+	mu      sync.Mutex
+	seedSeq int
+	seeds   map[string]model.KeywordSeed
 }
 
-func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration) *Service {
+func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUsername, adminPassword string, anonymousLimit int, cooldownDuration time.Duration, opts ...Option) *Service {
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}
@@ -82,19 +126,28 @@ func New(buildClient BuildEngineClient, jdCollector JDCollectorClient, adminUser
 		seeds[seed.ID] = seed
 	}
 
-	return &Service{
-		buildClient:      buildClient,
-		jdCollector:      jdCollector,
-		adminUsername:    adminUsername,
-		adminPassword:    adminPassword,
-		anonymousLimit:   anonymousLimit,
-		cooldownDuration: cooldownDuration,
-		cacheTTL:         10 * time.Minute,
-		seedSeq:          len(initialSeeds),
-		seeds:            seeds,
-		recommendCache:   make(map[string]cachedRecommendation),
-		anonymousUsage:   make(map[string]sessionUsage),
+	service := &Service{
+		buildClient:       buildClient,
+		jdCollector:       jdCollector,
+		adminUsername:     adminUsername,
+		adminPassword:     adminPassword,
+		anonymousLimit:    anonymousLimit,
+		ipHourlyLimit:     max(anonymousLimit*4, 20),
+		deviceHourlyLimit: max(anonymousLimit*2, 12),
+		cooldownDuration:  cooldownDuration,
+		cacheTTL:          10 * time.Minute,
+		challengePassTTL:  15 * time.Minute,
+		sessionTTL:        30 * 24 * time.Hour,
+		store:             newMemorySecurityStore(),
+		challengeVerifier: noopChallengeVerifier{},
+		seedSeq:           len(initialSeeds),
+		seeds:             seeds,
 	}
+
+	for _, opt := range opts {
+		opt(service)
+	}
+	return service
 }
 
 func (s *Service) GetCollectorScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error) {
@@ -127,30 +180,43 @@ func newSeed(id, category, keyword, canonicalModel, brand string, aliases []stri
 	}
 }
 
-func (s *Service) IssueAnonymousSession(anonymousID string) model.AnonymousSessionResponse {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *Service) IssueAnonymousSession(ctx context.Context, meta RequestMeta) (model.AnonymousSessionResponse, error) {
+	anonymousID := strings.TrimSpace(meta.AnonymousID)
 	if anonymousID == "" {
 		anonymousID = "anon_" + randomToken(12)
 	}
+	meta.AnonymousID = anonymousID
 
-	status := s.currentUsageLocked(anonymousID)
-	return model.AnonymousSessionResponse{
-		AnonymousID:         anonymousID,
-		CooldownSeconds:     cooldownSeconds(status.CooldownUntil),
-		RemainingAIRequests: max(0, s.anonymousLimit-status.Used),
-		ChallengeRequired:   false,
+	sessionUsage, _, err := s.loadUsage(ctx, "session", anonymousID)
+	if err != nil {
+		return model.AnonymousSessionResponse{}, err
 	}
+	challengePassed, err := s.hasChallengePass(ctx, meta)
+	if err != nil {
+		return model.AnonymousSessionResponse{}, err
+	}
+	riskLevel := s.evaluateRiskLevel(meta)
+	challengeRequired := !challengePassed && s.challengeVerifier.Available() && riskLevel == riskLevelElevated
+
+	return model.AnonymousSessionResponse{
+		AnonymousID:             anonymousID,
+		CooldownSeconds:         cooldownSeconds(sessionUsage.CooldownUntil),
+		RemainingAIRequests:     max(0, s.anonymousLimit-sessionUsage.Used),
+		ChallengeRequired:       challengeRequired,
+		ChallengePassed:         challengePassed,
+		RiskLevel:               riskLevel,
+		SessionExpiresInSeconds: int(s.sessionTTL.Seconds()),
+	}, nil
 }
 
 func (s *Service) AuthenticateAdmin(username, password string) bool {
 	return username == s.adminUsername && password == s.adminPassword
 }
 
-func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, anonymousID string) (model.CatalogRecommendationResponse, error) {
-	if anonymousID == "" {
-		anonymousID = "anon_" + randomToken(12)
+func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, meta RequestMeta) (model.CatalogRecommendationResponse, error) {
+	meta.AnonymousID = strings.TrimSpace(meta.AnonymousID)
+	if meta.AnonymousID == "" {
+		meta.AnonymousID = "anon_" + randomToken(12)
 	}
 
 	key, err := recommendationKey(req)
@@ -158,46 +224,69 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 		return model.CatalogRecommendationResponse{}, err
 	}
 
-	now := time.Now()
-
-	s.mu.Lock()
-	usage := s.currentUsageLocked(anonymousID)
-	if usage.CooldownUntil.After(now) {
-		s.mu.Unlock()
-		return model.CatalogRecommendationResponse{
-			RequestStatus: model.RequestStatus{
-				CacheHit:            false,
-				RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
-				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
-			},
-		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
+	riskLevel := s.evaluateRiskLevel(meta)
+	sessionUsage, sessionExists, err := s.loadUsage(ctx, "session", meta.AnonymousID)
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
 	}
-	if cached, ok := s.recommendCache[key]; ok && cached.expiresAt.After(now) {
-		response := cached.response
-		response.RequestStatus = model.RequestStatus{
-			CacheHit:            true,
-			RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
-			CooldownSeconds:     0,
-		}
-		s.mu.Unlock()
+	ipUsage, ipExists, err := s.loadUsage(ctx, "ip", meta.ClientIP)
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
+	deviceUsage, deviceExists, err := s.loadUsage(ctx, "device", s.deviceKey(meta.DeviceFingerprint))
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
+	challengePassed, err := s.hasChallengePass(ctx, meta)
+	if err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
+
+	if blocked := firstCooldown(sessionUsage, ipUsage, deviceUsage); !blocked.IsZero() {
+		return model.CatalogRecommendationResponse{
+			RequestStatus: s.requestStatus(false, sessionUsage, blocked, challengePassed, riskLevel),
+		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(blocked)}
+	}
+
+	if cached, ok, err := s.store.LoadRecommendation(ctx, key); err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	} else if ok && cached.ExpiresAt.After(time.Now()) {
+		response := cached.Response
+		response.RequestStatus = s.requestStatus(true, sessionUsage, time.Time{}, challengePassed, riskLevel)
 		return response, nil
 	}
-	if usage.Used >= s.anonymousLimit {
-		usage.CooldownUntil = now.Add(s.cooldownDuration)
-		s.anonymousUsage[anonymousID] = usage
-		s.mu.Unlock()
+
+	requiresChallenge := !challengePassed && riskLevel == riskLevelElevated && s.challengeVerifier.Available()
+	if requiresChallenge {
 		return model.CatalogRecommendationResponse{
-			RequestStatus: model.RequestStatus{
-				CacheHit:            false,
-				RemainingAIRequests: 0,
-				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
-			},
-		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
+			RequestStatus: s.requestStatus(false, sessionUsage, time.Time{}, false, riskLevel),
+		}, ErrChallengeRequired{RiskLevel: riskLevel}
 	}
-	usage.Used++
-	s.anonymousUsage[anonymousID] = usage
-	remaining := max(0, s.anonymousLimit-usage.Used)
-	s.mu.Unlock()
+
+	now := time.Now()
+	sessionUsage = ensureUsageWindow(sessionUsage, sessionExists, now)
+	ipUsage = ensureUsageWindow(ipUsage, ipExists, now)
+	deviceUsage = ensureUsageWindow(deviceUsage, deviceExists, now)
+
+	if sessionUsage.Used >= s.anonymousLimit || ipUsage.Used >= s.ipHourlyLimit || deviceUsage.Used >= s.deviceHourlyLimit {
+		cooldownUntil := now.Add(s.cooldownDuration)
+		sessionUsage.CooldownUntil = maxTime(sessionUsage.CooldownUntil, cooldownUntil)
+		ipUsage.CooldownUntil = maxTime(ipUsage.CooldownUntil, cooldownUntil)
+		deviceUsage.CooldownUntil = maxTime(deviceUsage.CooldownUntil, cooldownUntil)
+		if err := s.saveUsageTriplet(ctx, meta, sessionUsage, ipUsage, deviceUsage); err != nil {
+			return model.CatalogRecommendationResponse{}, err
+		}
+		return model.CatalogRecommendationResponse{
+			RequestStatus: s.requestStatus(false, sessionUsage, cooldownUntil, challengePassed, riskLevel),
+		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(cooldownUntil)}
+	}
+
+	sessionUsage.Used++
+	ipUsage.Used++
+	deviceUsage.Used++
+	if err := s.saveUsageTriplet(ctx, meta, sessionUsage, ipUsage, deviceUsage); err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
 
 	catalog, err := s.buildClient.GetPriceCatalog(ctx, req)
 	if err != nil {
@@ -207,21 +296,22 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 	if err != nil {
 		return model.CatalogRecommendationResponse{}, err
 	}
+
 	response := model.CatalogRecommendationResponse{
-		RequestStatus: model.RequestStatus{
-			CacheHit:            false,
-			RemainingAIRequests: remaining,
-			CooldownSeconds:     0,
-		},
+		RequestStatus:    s.requestStatus(false, sessionUsage, time.Time{}, challengePassed, riskLevel),
 		CatalogItemCount: len(catalog.Items),
 		CatalogWarnings:  catalog.Warnings,
 		Selection:        advice.Selection,
 		Advice:           &advice.Advisory,
 	}
+	response.RequestStatus.RemainingAIRequests = max(0, s.anonymousLimit-sessionUsage.Used)
 
-	s.mu.Lock()
-	s.recommendCache[key] = cachedRecommendation{response: response, expiresAt: now.Add(s.cacheTTL)}
-	s.mu.Unlock()
+	if err := s.store.SaveRecommendation(ctx, key, storedRecommendation{
+		Response:  response,
+		ExpiresAt: now.Add(s.cacheTTL),
+	}, s.cacheTTL); err != nil {
+		return model.CatalogRecommendationResponse{}, err
+	}
 	return response, nil
 }
 
@@ -613,15 +703,27 @@ func cooldownSeconds(until time.Time) int {
 	return seconds
 }
 
-func (s *Service) currentUsageLocked(anonymousID string) sessionUsage {
-	now := time.Now()
-	usage, ok := s.anonymousUsage[anonymousID]
-	if !ok || now.Sub(usage.WindowStarted) >= time.Hour {
-		usage = sessionUsage{WindowStarted: now}
-		s.anonymousUsage[anonymousID] = usage
-		return usage
+const (
+	riskLevelNormal   = "normal"
+	riskLevelElevated = "elevated"
+	usageTTL          = 2 * time.Hour
+)
+
+func (s *Service) VerifyChallenge(ctx context.Context, meta RequestMeta, token string) (model.ChallengeVerifyResponse, error) {
+	if !s.challengeVerifier.Available() {
+		return model.ChallengeVerifyResponse{}, fmt.Errorf("challenge verifier is not configured")
 	}
-	return usage
+	if err := s.challengeVerifier.Verify(ctx, token, meta.ClientIP); err != nil {
+		return model.ChallengeVerifyResponse{}, err
+	}
+	if err := s.markChallengePass(ctx, meta); err != nil {
+		return model.ChallengeVerifyResponse{}, err
+	}
+	return model.ChallengeVerifyResponse{
+		Verified:             true,
+		PassExpiresInSeconds: int(s.challengePassTTL.Seconds()),
+		RiskLevel:            riskLevelNormal,
+	}, nil
 }
 
 type ErrRateLimited struct {
@@ -630,6 +732,14 @@ type ErrRateLimited struct {
 
 func (e ErrRateLimited) Error() string {
 	return "rate limited"
+}
+
+type ErrChallengeRequired struct {
+	RiskLevel string
+}
+
+func (e ErrChallengeRequired) Error() string {
+	return "challenge required"
 }
 
 type ErrNotFound struct {
@@ -648,4 +758,116 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func firstCooldown(states ...usageState) time.Time {
+	for _, state := range states {
+		if state.CooldownUntil.After(time.Now()) {
+			return state.CooldownUntil
+		}
+	}
+	return time.Time{}
+}
+
+func ensureUsageWindow(usage usageState, exists bool, now time.Time) usageState {
+	if !exists || now.Sub(usage.WindowStarted) >= time.Hour {
+		return usageState{WindowStarted: now}
+	}
+	return usage
+}
+
+func (s *Service) requestStatus(cacheHit bool, session usageState, cooldownUntil time.Time, challengePassed bool, riskLevel string) model.RequestStatus {
+	return model.RequestStatus{
+		CacheHit:            cacheHit,
+		RemainingAIRequests: max(0, s.anonymousLimit-session.Used),
+		CooldownSeconds:     cooldownSeconds(cooldownUntil),
+		ChallengeRequired:   !challengePassed && riskLevel == riskLevelElevated && s.challengeVerifier.Available(),
+		ChallengePassed:     challengePassed,
+		RiskLevel:           riskLevel,
+	}
+}
+
+func (s *Service) evaluateRiskLevel(meta RequestMeta) string {
+	if strings.TrimSpace(meta.DeviceFingerprint) == "" {
+		return riskLevelElevated
+	}
+	return riskLevelNormal
+}
+
+func (s *Service) loadUsage(ctx context.Context, scope, key string) (usageState, bool, error) {
+	if strings.TrimSpace(key) == "" {
+		return usageState{}, false, nil
+	}
+	return s.store.LoadUsage(ctx, scope, key)
+}
+
+func (s *Service) saveUsageTriplet(ctx context.Context, meta RequestMeta, session usageState, ip usageState, device usageState) error {
+	if err := s.store.SaveUsage(ctx, "session", meta.AnonymousID, session, usageTTL); err != nil {
+		return err
+	}
+	if strings.TrimSpace(meta.ClientIP) != "" {
+		if err := s.store.SaveUsage(ctx, "ip", meta.ClientIP, ip, usageTTL); err != nil {
+			return err
+		}
+	}
+	if err := s.store.SaveUsage(ctx, "device", s.deviceKey(meta.DeviceFingerprint), device, usageTTL); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) hasChallengePass(ctx context.Context, meta RequestMeta) (bool, error) {
+	keys := []string{
+		"session:" + meta.AnonymousID,
+		"ip:" + strings.TrimSpace(meta.ClientIP),
+		"device:" + s.deviceKey(meta.DeviceFingerprint),
+	}
+	for _, key := range keys {
+		if strings.HasSuffix(key, ":") {
+			continue
+		}
+		ok, err := s.store.HasChallengePass(ctx, key)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *Service) markChallengePass(ctx context.Context, meta RequestMeta) error {
+	keys := []string{
+		"session:" + meta.AnonymousID,
+		"ip:" + strings.TrimSpace(meta.ClientIP),
+		"device:" + s.deviceKey(meta.DeviceFingerprint),
+	}
+	for _, key := range keys {
+		if strings.HasSuffix(key, ":") {
+			continue
+		}
+		if err := s.store.SetChallengePass(ctx, key, s.challengePassTTL); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) deviceKey(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "missing"
+	}
+	return value
+}
+
+func maxTime(values ...time.Time) time.Time {
+	var current time.Time
+	for _, value := range values {
+		if value.After(current) {
+			current = value
+		}
+	}
+	return current
 }

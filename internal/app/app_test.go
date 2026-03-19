@@ -77,6 +77,7 @@ func newTestApp() *App {
 		ServiceName:         "rigel-console",
 		AdminCookieName:     "rigel_admin_session",
 		AnonymousCookieName: "rigel_anonymous_id",
+		AdminAllowedCIDRs:   []string{"192.0.2.0/24"},
 	}
 	console := consoleservice.New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	return New(cfg, console)

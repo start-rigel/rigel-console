@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,12 +21,19 @@ import (
 var webFS embed.FS
 
 type App struct {
-	cfg     config.Config
-	console *consoleservice.Service
+	cfg               config.Config
+	console           *consoleservice.Service
+	adminAllowedCIDRs []*net.IPNet
+	trustedProxyCIDRs []*net.IPNet
 }
 
 func New(cfg config.Config, console *consoleservice.Service) *App {
-	return &App{cfg: cfg, console: console}
+	return &App{
+		cfg:               cfg,
+		console:           console,
+		adminAllowedCIDRs: parseCIDRs(cfg.AdminAllowedCIDRs),
+		trustedProxyCIDRs: parseCIDRs(cfg.TrustedProxyCIDRs),
+	}
 }
 
 func (a *App) Handler() http.Handler {
@@ -37,6 +45,7 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("/assets/", http.FileServer(http.FS(staticFS)))
 	mux.HandleFunc("/healthz", a.handleHealth)
 	mux.HandleFunc("/api/v1/session/anonymous", a.handleAnonymousSession)
+	mux.HandleFunc("/api/v1/challenge/verify", a.handleChallengeVerify)
 	mux.HandleFunc("/catalog/recommend", a.handleGenerateCatalogRecommendation)
 	mux.HandleFunc("/admin/login", a.handleAdminLogin)
 	mux.HandleFunc("/admin/logout", a.handleAdminLogout)
@@ -66,8 +75,16 @@ func (a *App) handleAnonymousSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	existing := a.readCookie(r, a.cfg.AnonymousCookieName)
-	session := a.console.IssueAnonymousSession(existing)
-	a.setCookie(w, a.cfg.AnonymousCookieName, session.AnonymousID, 30*24*time.Hour)
+	session, err := a.console.IssueAnonymousSession(r.Context(), consoleservice.RequestMeta{
+		ClientIP:          a.clientIP(r),
+		DeviceFingerprint: strings.TrimSpace(r.Header.Get("X-Device-Fingerprint")),
+		AnonymousID:       existing,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	a.setCookie(w, r, a.cfg.AnonymousCookieName, session.AnonymousID, time.Duration(session.SessionExpiresInSeconds)*time.Second)
 	writeJSON(w, http.StatusOK, session)
 }
 
@@ -85,10 +102,20 @@ func (a *App) handleGenerateCatalogRecommendation(w http.ResponseWriter, r *http
 	if anonymousID == "" {
 		anonymousID = a.readCookie(r, a.cfg.AnonymousCookieName)
 	}
-	session := a.console.IssueAnonymousSession(anonymousID)
-	a.setCookie(w, a.cfg.AnonymousCookieName, session.AnonymousID, 30*24*time.Hour)
+	meta := consoleservice.RequestMeta{
+		ClientIP:          a.clientIP(r),
+		DeviceFingerprint: strings.TrimSpace(r.Header.Get("X-Device-Fingerprint")),
+		AnonymousID:       anonymousID,
+	}
+	session, err := a.console.IssueAnonymousSession(r.Context(), meta)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	meta.AnonymousID = session.AnonymousID
+	a.setCookie(w, r, a.cfg.AnonymousCookieName, session.AnonymousID, time.Duration(session.SessionExpiresInSeconds)*time.Second)
 
-	response, err := a.console.GenerateCatalogRecommendation(r.Context(), req, session.AnonymousID)
+	response, err := a.console.GenerateCatalogRecommendation(r.Context(), req, meta)
 	if err != nil {
 		var rateLimited consoleservice.ErrRateLimited
 		if errors.As(err, &rateLimited) {
@@ -101,13 +128,51 @@ func (a *App) handleGenerateCatalogRecommendation(w http.ResponseWriter, r *http
 			})
 			return
 		}
+		var challengeRequired consoleservice.ErrChallengeRequired
+		if errors.As(err, &challengeRequired) {
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"error": map[string]any{
+					"code":               "challenge_required",
+					"message":            "当前请求需要先完成安全验证。",
+					"challenge_required": true,
+					"risk_level":         challengeRequired.RiskLevel,
+				},
+			})
+			return
+		}
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, response)
 }
 
+func (a *App) handleChallengeVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req model.ChallengeVerifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	response, err := a.console.VerifyChallenge(r.Context(), consoleservice.RequestMeta{
+		ClientIP:          a.clientIP(r),
+		DeviceFingerprint: strings.TrimSpace(req.DeviceFingerprint),
+		AnonymousID:       strings.TrimSpace(req.AnonymousID),
+	}, req.ChallengeToken)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
 func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
+	if !a.adminAllowed(r) {
+		writeError(w, http.StatusForbidden, "admin access is restricted to private network")
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		a.serveSPA(w)
@@ -121,7 +186,7 @@ func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "invalid username or password")
 			return
 		}
-		a.setCookie(w, a.cfg.AdminCookieName, "ok", 12*time.Hour)
+		a.setCookie(w, r, a.cfg.AdminCookieName, "ok", 12*time.Hour)
 		writeJSON(w, http.StatusOK, model.AdminLoginResponse{Username: strings.TrimSpace(req.Username)})
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -129,6 +194,10 @@ func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
+	if !a.adminAllowed(r) {
+		writeError(w, http.StatusForbidden, "admin access is restricted to private network")
+		return
+	}
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -410,6 +479,10 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	if !a.adminAllowed(r) {
+		writeError(w, http.StatusForbidden, "admin access is restricted to private network")
+		return false
+	}
 	if a.readCookie(r, a.cfg.AdminCookieName) == "ok" {
 		return true
 	}
@@ -429,13 +502,14 @@ func (a *App) readCookie(r *http.Request, name string) string {
 	return cookie.Value
 }
 
-func (a *App) setCookie(w http.ResponseWriter, name, value string, maxAge time.Duration) {
+func (a *App) setCookie(w http.ResponseWriter, r *http.Request, name, value string, maxAge time.Duration) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
 		MaxAge:   int(maxAge.Seconds()),
 		HttpOnly: true,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
@@ -477,4 +551,50 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func parseCIDRs(values []string) []*net.IPNet {
+	out := make([]*net.IPNet, 0, len(values))
+	for _, value := range values {
+		_, network, err := net.ParseCIDR(strings.TrimSpace(value))
+		if err == nil {
+			out = append(out, network)
+		}
+	}
+	return out
+}
+
+func (a *App) adminAllowed(r *http.Request) bool {
+	ip := net.ParseIP(a.clientIP(r))
+	if ip == nil {
+		return false
+	}
+	for _, network := range a.adminAllowedCIDRs {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *App) clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		host = strings.TrimSpace(r.RemoteAddr)
+	}
+	remoteIP := net.ParseIP(host)
+	if remoteIP == nil {
+		return host
+	}
+
+	for _, network := range a.trustedProxyCIDRs {
+		if network.Contains(remoteIP) {
+			forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
+			if net.ParseIP(forwarded) != nil {
+				return forwarded
+			}
+			break
+		}
+	}
+	return remoteIP.String()
 }

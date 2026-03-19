@@ -15,11 +15,12 @@ import (
 
 type Client struct {
 	baseURL    string
+	token      string
 	httpClient *http.Client
 }
 
-func New(baseURL string) *Client {
-	return &Client{baseURL: strings.TrimRight(baseURL, "/"), httpClient: &http.Client{Timeout: 15 * time.Second}}
+func New(baseURL, token string) *Client {
+	return &Client{baseURL: strings.TrimRight(baseURL, "/"), token: strings.TrimSpace(token), httpClient: &http.Client{Timeout: 15 * time.Second}}
 }
 
 func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildRequest) (model.BuildEnginePriceCatalog, error) {
@@ -31,7 +32,7 @@ func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildReq
 		query.Set("build_mode", req.BuildMode)
 	}
 	query.Set("limit", "500")
-	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil)
+	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, c.token, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil)
 }
 
 func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
@@ -44,10 +45,10 @@ func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBu
 		"notes":                req.Notes,
 		"catalog":              catalog,
 	}
-	return doJSON[model.CatalogAdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", payload)
+	return doJSON[model.CatalogAdviceResponse](ctx, c.httpClient, c.token, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", payload)
 }
 
-func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target string, payload any) (T, error) {
+func doJSON[T any](ctx context.Context, httpClient *http.Client, token, method, target string, payload any) (T, error) {
 	var zero T
 	var body *bytes.Reader
 	if payload == nil {
@@ -65,6 +66,9 @@ func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target 
 	}
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("X-Rigel-Service-Token", token)
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {

@@ -16,34 +16,56 @@ type Config struct {
 	LogLevel             string        `yaml:"log_level"`
 	FrontendMode         string        `yaml:"frontend_mode"`
 	BuildEngineBaseURL   string        `yaml:"build_engine_base_url"`
+	BuildEngineToken     string        `yaml:"build_engine_token"`
 	JDCollectorBaseURL   string        `yaml:"jd_collector_base_url"`
 	AdminUsername        string        `yaml:"admin_username"`
 	AdminPassword        string        `yaml:"admin_password"`
 	AdminCookieName      string        `yaml:"admin_cookie_name"`
 	AnonymousCookieName  string        `yaml:"anonymous_cookie_name"`
 	AnonymousHourlyLimit int           `yaml:"anonymous_hourly_limit"`
+	IPHourlyLimit        int           `yaml:"ip_hourly_limit"`
+	DeviceHourlyLimit    int           `yaml:"device_hourly_limit"`
 	CooldownSeconds      int           `yaml:"cooldown_seconds"`
+	ChallengePassSeconds int           `yaml:"challenge_pass_seconds"`
+	SessionTTLSeconds    int           `yaml:"session_ttl_seconds"`
+	RedisAddr            string        `yaml:"redis_addr"`
+	ChallengeProvider    string        `yaml:"challenge_provider"`
+	ChallengeSecret      string        `yaml:"challenge_secret"`
+	ChallengeVerifyURL   string        `yaml:"challenge_verify_url"`
+	TrustedProxyCIDRs    []string      `yaml:"trusted_proxy_cidrs"`
+	AdminAllowedCIDRs    []string      `yaml:"admin_allowed_cidrs"`
 	ReadTimeout          time.Duration `yaml:"-"`
 	WriteTimeout         time.Duration `yaml:"-"`
 	IdleTimeout          time.Duration `yaml:"-"`
 }
 
 type fileConfig struct {
-	ServiceName          string `yaml:"service_name"`
-	HTTPPort             string `yaml:"http_port"`
-	LogLevel             string `yaml:"log_level"`
-	FrontendMode         string `yaml:"frontend_mode"`
-	BuildEngineBaseURL   string `yaml:"build_engine_base_url"`
-	JDCollectorBaseURL   string `yaml:"jd_collector_base_url"`
-	AdminUsername        string `yaml:"admin_username"`
-	AdminPassword        string `yaml:"admin_password"`
-	AdminCookieName      string `yaml:"admin_cookie_name"`
-	AnonymousCookieName  string `yaml:"anonymous_cookie_name"`
-	AnonymousHourlyLimit int    `yaml:"anonymous_hourly_limit"`
-	CooldownSeconds      int    `yaml:"cooldown_seconds"`
-	ReadTimeout          string `yaml:"read_timeout"`
-	WriteTimeout         string `yaml:"write_timeout"`
-	IdleTimeout          string `yaml:"idle_timeout"`
+	ServiceName          string   `yaml:"service_name"`
+	HTTPPort             string   `yaml:"http_port"`
+	LogLevel             string   `yaml:"log_level"`
+	FrontendMode         string   `yaml:"frontend_mode"`
+	BuildEngineBaseURL   string   `yaml:"build_engine_base_url"`
+	BuildEngineToken     string   `yaml:"build_engine_token"`
+	JDCollectorBaseURL   string   `yaml:"jd_collector_base_url"`
+	AdminUsername        string   `yaml:"admin_username"`
+	AdminPassword        string   `yaml:"admin_password"`
+	AdminCookieName      string   `yaml:"admin_cookie_name"`
+	AnonymousCookieName  string   `yaml:"anonymous_cookie_name"`
+	AnonymousHourlyLimit int      `yaml:"anonymous_hourly_limit"`
+	IPHourlyLimit        int      `yaml:"ip_hourly_limit"`
+	DeviceHourlyLimit    int      `yaml:"device_hourly_limit"`
+	CooldownSeconds      int      `yaml:"cooldown_seconds"`
+	ChallengePassSeconds int      `yaml:"challenge_pass_seconds"`
+	SessionTTLSeconds    int      `yaml:"session_ttl_seconds"`
+	RedisAddr            string   `yaml:"redis_addr"`
+	ChallengeProvider    string   `yaml:"challenge_provider"`
+	ChallengeSecret      string   `yaml:"challenge_secret"`
+	ChallengeVerifyURL   string   `yaml:"challenge_verify_url"`
+	TrustedProxyCIDRs    []string `yaml:"trusted_proxy_cidrs"`
+	AdminAllowedCIDRs    []string `yaml:"admin_allowed_cidrs"`
+	ReadTimeout          string   `yaml:"read_timeout"`
+	WriteTimeout         string   `yaml:"write_timeout"`
+	IdleTimeout          string   `yaml:"idle_timeout"`
 }
 
 func DefaultPath() string {
@@ -81,13 +103,24 @@ func Load(path string) (Config, error) {
 		LogLevel:             blankFallback(raw.LogLevel, "info"),
 		FrontendMode:         blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:   blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
+		BuildEngineToken:     raw.BuildEngineToken,
 		JDCollectorBaseURL:   blankFallback(raw.JDCollectorBaseURL, "http://rigel-jd-collector:18081"),
 		AdminUsername:        blankFallback(raw.AdminUsername, "admin"),
 		AdminPassword:        blankFallback(raw.AdminPassword, "admin123456"),
 		AdminCookieName:      blankFallback(raw.AdminCookieName, "rigel_admin_session"),
 		AnonymousCookieName:  blankFallback(raw.AnonymousCookieName, "rigel_anonymous_id"),
 		AnonymousHourlyLimit: intFallback(raw.AnonymousHourlyLimit, 5),
+		IPHourlyLimit:        intFallback(raw.IPHourlyLimit, 20),
+		DeviceHourlyLimit:    intFallback(raw.DeviceHourlyLimit, 12),
 		CooldownSeconds:      intFallback(raw.CooldownSeconds, 60),
+		ChallengePassSeconds: intFallback(raw.ChallengePassSeconds, 900),
+		SessionTTLSeconds:    intFallback(raw.SessionTTLSeconds, 2592000),
+		RedisAddr:            raw.RedisAddr,
+		ChallengeProvider:    raw.ChallengeProvider,
+		ChallengeSecret:      raw.ChallengeSecret,
+		ChallengeVerifyURL:   blankFallback(raw.ChallengeVerifyURL, "https://challenges.cloudflare.com/turnstile/v0/siteverify"),
+		TrustedProxyCIDRs:    append([]string(nil), raw.TrustedProxyCIDRs...),
+		AdminAllowedCIDRs:    normalizeCIDRDefaults(raw.AdminAllowedCIDRs),
 		ReadTimeout:          readTimeout,
 		WriteTimeout:         writeTimeout,
 		IdleTimeout:          idleTimeout,
@@ -121,4 +154,18 @@ func intFallback(value, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func normalizeCIDRDefaults(values []string) []string {
+	if len(values) > 0 {
+		return append([]string(nil), values...)
+	}
+	return []string{
+		"127.0.0.1/32",
+		"::1/128",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"100.64.0.0/10",
+	}
 }

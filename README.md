@@ -58,6 +58,7 @@
 
 - `GET /healthz`
 - `GET /api/v1/session/anonymous`
+- `POST /api/v1/challenge/verify`
 - `POST /catalog/recommend`
 - `GET /`
 - `GET /admin/login`
@@ -107,7 +108,17 @@ go run ./cmd/server -config ./configs/config.yaml
 - 后台用户名：`admin`
 - 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
+- 单 IP 小时额度：`20`
+- 单设备指纹小时额度：`12`
 - 匿名冷却秒数：`60`
+- 挑战通过放行秒数：`900`
+
+当前安全规则：
+
+- 前台推荐请求默认会附带设备指纹头 `X-Device-Fingerprint`
+- `rigel-console -> rigel-build-engine` 默认通过 `build_engine_token` 走内部 token 鉴权
+- 后台页面与后台 API 默认只允许私网 / VPN 来源访问
+- 匿名限流、冷却和推荐缓存优先写入 Redis；未配置 Redis 时回退到进程内存
 
 ## 前端开发与构建
 
@@ -173,7 +184,10 @@ curl http://localhost:18084/api/v1/session/anonymous
   "anonymous_id": "anon_xxxxx",
   "cooldown_seconds": 0,
   "remaining_ai_requests": 5,
-  "challenge_required": false
+  "challenge_required": false,
+  "challenge_passed": false,
+  "risk_level": "normal",
+  "session_expires_in_seconds": 2592000
 }
 ```
 
@@ -186,6 +200,7 @@ curl http://localhost:18084/api/v1/session/anonymous
 curl -X POST http://localhost:18084/catalog/recommend \
   -H "Content-Type: application/json" \
   -H "X-Anonymous-Id: anon_xxxxx" \
+  -H "X-Device-Fingerprint: fp_xxxxx" \
   -d '{
     "budget": 6000,
     "use_case": "gaming",
@@ -201,7 +216,9 @@ curl -X POST http://localhost:18084/catalog/recommend \
   "request_status": {
     "cache_hit": false,
     "remaining_ai_requests": 4,
-    "cooldown_seconds": 0
+    "cooldown_seconds": 0,
+    "challenge_required": false,
+    "risk_level": "normal"
   },
   "catalog_item_count": 24,
   "catalog_warnings": [],
@@ -267,6 +284,8 @@ curl -X POST http://localhost:18084/catalog/recommend \
 - console 当前会先向 build-engine 获取价格目录，再请求推荐草案
 - 当前返回结构以 `request_status`、`catalog_item_count`、`selection`、`advice` 为主
 - 相同参数优先返回缓存结果，不重复消耗匿名 AI 次数
+- 高风险或缺失指纹的请求会返回 `challenge_required=true`
+- 当前挑战验证接口为 `POST /api/v1/challenge/verify`
 
 ### 4. 后台登录
 
@@ -306,6 +325,7 @@ curl -I http://localhost:18084/admin/keywords/import
 
 - 前台推荐页允许匿名直接访问
 - 后台管理页必须先登录
+- 后台管理页默认只允许私网 / VPN 访问
 - 前台和后台页面路由明确分离
 - 页面前端统一由 React 渲染，Go 侧只负责返回嵌入式 SPA 页面壳和 API
 

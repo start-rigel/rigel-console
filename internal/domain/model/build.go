@@ -27,9 +27,12 @@ type CatalogRecommendationResponse struct {
 }
 
 type RequestStatus struct {
-	CacheHit            bool `json:"cache_hit"`
-	RemainingAIRequests int  `json:"remaining_ai_requests"`
-	CooldownSeconds     int  `json:"cooldown_seconds"`
+	CacheHit            bool   `json:"cache_hit"`
+	RemainingAIRequests int    `json:"remaining_ai_requests"`
+	CooldownSeconds     int    `json:"cooldown_seconds"`
+	ChallengeRequired   bool   `json:"challenge_required"`
+	ChallengePassed     bool   `json:"challenge_passed,omitempty"`
+	RiskLevel           string `json:"risk_level,omitempty"`
 }
 
 // CatalogSelection is the selected shopping list draft returned from build-engine.
@@ -104,10 +107,25 @@ type CatalogAdviceResponse struct {
 }
 
 type AnonymousSessionResponse struct {
-	AnonymousID         string `json:"anonymous_id"`
-	CooldownSeconds     int    `json:"cooldown_seconds"`
-	RemainingAIRequests int    `json:"remaining_ai_requests"`
-	ChallengeRequired   bool   `json:"challenge_required"`
+	AnonymousID             string `json:"anonymous_id"`
+	CooldownSeconds         int    `json:"cooldown_seconds"`
+	RemainingAIRequests     int    `json:"remaining_ai_requests"`
+	ChallengeRequired       bool   `json:"challenge_required"`
+	ChallengePassed         bool   `json:"challenge_passed,omitempty"`
+	RiskLevel               string `json:"risk_level,omitempty"`
+	SessionExpiresInSeconds int    `json:"session_expires_in_seconds,omitempty"`
+}
+
+type ChallengeVerifyRequest struct {
+	AnonymousID       string `json:"anonymous_id"`
+	DeviceFingerprint string `json:"device_fingerprint,omitempty"`
+	ChallengeToken    string `json:"challenge_token"`
+}
+
+type ChallengeVerifyResponse struct {
+	Verified             bool   `json:"verified"`
+	PassExpiresInSeconds int    `json:"pass_expires_in_seconds,omitempty"`
+	RiskLevel            string `json:"risk_level,omitempty"`
 }
 
 type KeywordSeed struct {

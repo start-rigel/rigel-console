@@ -71,12 +71,13 @@ func (jdCollectorClientStub) UpdateScheduleConfig(_ context.Context, payload mod
 func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 	service := New(buildClientStub{}, jdCollectorClientStub{}, "admin", "secret", 2, time.Minute)
 	req := model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}
+	meta := RequestMeta{AnonymousID: "anon-1", ClientIP: "10.0.0.8", DeviceFingerprint: "fp-1"}
 
-	first, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
+	first, err := service.GenerateCatalogRecommendation(context.Background(), req, meta)
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() first error = %v", err)
 	}
-	second, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
+	second, err := service.GenerateCatalogRecommendation(context.Background(), req, meta)
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() second error = %v", err)
 	}
@@ -85,6 +86,25 @@ func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 	}
 	if !second.RequestStatus.CacheHit {
 		t.Fatal("expected second request to hit cache")
+	}
+}
+
+func TestGenerateCatalogRecommendationRequiresChallengeWithoutFingerprint(t *testing.T) {
+	service := New(
+		buildClientStub{},
+		jdCollectorClientStub{},
+		"admin",
+		"secret",
+		2,
+		time.Minute,
+		WithChallengeVerifier(NewChallengeVerifier("", "", "")),
+	)
+	_, err := service.GenerateCatalogRecommendation(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}, RequestMeta{
+		AnonymousID: "anon-risk",
+		ClientIP:    "10.0.0.8",
+	})
+	if err != nil {
+		t.Fatalf("expected fallback to no challenge when verifier is unavailable, got %v", err)
 	}
 }
 

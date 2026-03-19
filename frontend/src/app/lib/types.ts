@@ -16,6 +16,9 @@ export interface RequestStatus {
   cache_hit: boolean;
   remaining_ai_requests: number;
   cooldown_seconds: number;
+  challenge_required: boolean;
+  challenge_passed?: boolean;
+  risk_level?: string;
 }
 
 export interface AnonymousSessionResponse {
@@ -23,6 +26,15 @@ export interface AnonymousSessionResponse {
   cooldown_seconds: number;
   remaining_ai_requests: number;
   challenge_required: boolean;
+  challenge_passed?: boolean;
+  risk_level?: string;
+  session_expires_in_seconds?: number;
+}
+
+export interface ChallengeVerifyResponse {
+  verified: boolean;
+  pass_expires_in_seconds?: number;
+  risk_level?: string;
 }
 
 export interface CatalogRecommendationItem {

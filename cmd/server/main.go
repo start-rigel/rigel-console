@@ -29,8 +29,21 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	buildClient := buildengine.New(cfg.BuildEngineBaseURL)
+	buildClient := buildengine.New(cfg.BuildEngineBaseURL, cfg.BuildEngineToken)
 	jdCollectorClient := jdcollector.New(cfg.JDCollectorBaseURL)
+	opts := []consoleservice.Option{
+		consoleservice.WithLimits(cfg.IPHourlyLimit, cfg.DeviceHourlyLimit),
+		consoleservice.WithChallengePassTTL(time.Duration(cfg.ChallengePassSeconds) * time.Second),
+		consoleservice.WithSessionTTL(time.Duration(cfg.SessionTTLSeconds) * time.Second),
+		consoleservice.WithChallengeVerifier(consoleservice.NewChallengeVerifier(cfg.ChallengeProvider, cfg.ChallengeVerifyURL, cfg.ChallengeSecret)),
+	}
+	if cfg.RedisAddr != "" {
+		store, err := consoleservice.NewRedisSecurityStore(cfg.RedisAddr)
+		if err != nil {
+			log.Fatalf("init redis security store: %v", err)
+		}
+		opts = append(opts, consoleservice.WithStore(store))
+	}
 	consoleService := consoleservice.New(
 		buildClient,
 		jdCollectorClient,
@@ -38,6 +51,7 @@ func main() {
 		cfg.AdminPassword,
 		cfg.AnonymousHourlyLimit,
 		time.Duration(cfg.CooldownSeconds)*time.Second,
+		opts...,
 	)
 	application := app.New(cfg, consoleService)
 	server := &http.Server{
