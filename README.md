@@ -98,6 +98,12 @@ frontend/
 internal/app/web/dist
 ```
 
+当前页面主路径说明：
+
+- `frontend/` 是唯一页面源码目录
+- `internal/app/web/dist` 是唯一运行中的前端产物目录
+- 旧的 `internal/app/web/*.html` 静态页面已移除，不再作为维护路径
+
 启动示例：
 
 ```bash
