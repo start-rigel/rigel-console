@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -81,7 +82,7 @@ func Load(path string) (Config, error) {
 		LogLevel:              blankFallback(raw.LogLevel, "info"),
 		FrontendMode:          blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:    blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
-		BuildEngineAdminToken: blankFallback(raw.BuildEngineAdminToken, "rigel-build-engine-admin-token"),
+		BuildEngineAdminToken: blankFallback(os.Getenv("RIGEL_BUILD_ENGINE_ADMIN_TOKEN"), raw.BuildEngineAdminToken),
 		AdminUsername:         blankFallback(raw.AdminUsername, "admin"),
 		AdminPassword:         blankFallback(raw.AdminPassword, "admin123456"),
 		AdminCookieName:       blankFallback(raw.AdminCookieName, "rigel_admin_session"),
@@ -94,6 +95,9 @@ func Load(path string) (Config, error) {
 	}
 	if cfg.HTTPPort == "" {
 		return Config{}, fmt.Errorf("RIGEL_HTTP_PORT must not be empty")
+	}
+	if err := validateBuildEngineAdminToken(cfg.BuildEngineAdminToken); err != nil {
+		return Config{}, err
 	}
 	return cfg, nil
 }
@@ -121,4 +125,18 @@ func intFallback(value, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func validateBuildEngineAdminToken(token string) error {
+	trimmed := strings.TrimSpace(token)
+	if trimmed == "" {
+		return fmt.Errorf("build_engine_admin_token must not be empty")
+	}
+	if len(trimmed) < 24 {
+		return fmt.Errorf("build_engine_admin_token must be at least 24 characters")
+	}
+	if strings.EqualFold(trimmed, "rigel-build-engine-admin-token") {
+		return fmt.Errorf("build_engine_admin_token must not use the default development token")
+	}
+	return nil
 }

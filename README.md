@@ -107,7 +107,7 @@ go run ./cmd/server -config ./configs/config.yaml
 - 后台密码：`admin123456`
 - 匿名会话小时额度：`5`
 - 匿名冷却秒数：`60`
-- build-engine 后台 token：`build_engine_admin_token`（默认 `rigel-build-engine-admin-token`）
+- build-engine 后台 token：`build_engine_admin_token`（必填，建议通过密钥管理注入，长度至少 24 位）
 
 ## 前端开发与构建
 
