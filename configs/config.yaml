@@ -4,6 +4,15 @@ log_level: debug
 frontend_mode: embedded
 build_engine_base_url: http://rigel-build-engine:18082
 build_engine_admin_token: rigel_admin_token_4f8d2a7b9c1e6f3a5d7b8c9e
+admin_allowed_cidrs:
+  - 127.0.0.0/8
+  - ::1/128
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+trusted_proxy_cidrs:
+  - 127.0.0.0/8
+  - ::1/128
 admin_username: admin
 admin_password: admin123456
 admin_cookie_name: rigel_admin_session

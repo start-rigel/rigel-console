@@ -93,8 +93,8 @@ func Load(path string) (Config, error) {
 		FrontendMode:          blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:    blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
 		BuildEngineAdminToken: blankFallback(os.Getenv("RIGEL_BUILD_ENGINE_ADMIN_TOKEN"), raw.BuildEngineAdminToken),
-		AdminAllowedCIDRs:     append([]string{}, raw.AdminAllowedCIDRs...),
-		TrustedProxyCIDRs:     append([]string{}, raw.TrustedProxyCIDRs...),
+		AdminAllowedCIDRs:     cidrFallback(raw.AdminAllowedCIDRs, []string{"127.0.0.0/8", "::1/128"}),
+		TrustedProxyCIDRs:     cidrFallback(raw.TrustedProxyCIDRs, []string{"127.0.0.0/8", "::1/128"}),
 		ChallengeProvider:     strings.TrimSpace(raw.ChallengeProvider),
 		ChallengeSiteKey:      strings.TrimSpace(raw.ChallengeSiteKey),
 		AdminUsername:         blankFallback(raw.AdminUsername, "admin"),
@@ -154,4 +154,22 @@ func validateBuildEngineAdminToken(token string) error {
 		return fmt.Errorf("build_engine_admin_token must not use the default development token")
 	}
 	return nil
+}
+
+func cidrFallback(values, fallback []string) []string {
+	if len(values) == 0 {
+		return append([]string{}, fallback...)
+	}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return append([]string{}, fallback...)
+	}
+	return out
 }

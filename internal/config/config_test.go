@@ -25,6 +25,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.BuildEngineBaseURL == "" {
 		t.Fatal("expected build-engine base url")
 	}
+	if len(cfg.AdminAllowedCIDRs) == 0 {
+		t.Fatal("expected default admin_allowed_cidrs")
+	}
 }
 
 func TestLoadRejectsWeakAdminToken(t *testing.T) {
