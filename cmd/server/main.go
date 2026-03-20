@@ -28,7 +28,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	buildClient := buildengine.New(cfg.BuildEngineBaseURL, cfg.BuildEngineAdminToken)
+	buildClient := buildengine.NewWithTimeout(cfg.BuildEngineBaseURL, cfg.BuildEngineAdminToken, cfg.BuildEngineTimeout)
 	consoleService := consoleservice.New(
 		buildClient,
 		cfg.AdminUsername,

@@ -18,6 +18,7 @@ type Config struct {
 	FrontendMode          string        `yaml:"frontend_mode"`
 	BuildEngineBaseURL    string        `yaml:"build_engine_base_url"`
 	BuildEngineAdminToken string        `yaml:"build_engine_admin_token"`
+	BuildEngineTimeout    time.Duration `yaml:"-"`
 	AdminAllowedCIDRs     []string      `yaml:"admin_allowed_cidrs"`
 	TrustedProxyCIDRs     []string      `yaml:"trusted_proxy_cidrs"`
 	ChallengeProvider     string        `yaml:"challenge_provider"`
@@ -41,6 +42,7 @@ type fileConfig struct {
 	FrontendMode          string   `yaml:"frontend_mode"`
 	BuildEngineBaseURL    string   `yaml:"build_engine_base_url"`
 	BuildEngineAdminToken string   `yaml:"build_engine_admin_token"`
+	BuildEngineTimeout    string   `yaml:"build_engine_timeout"`
 	AdminAllowedCIDRs     []string `yaml:"admin_allowed_cidrs"`
 	TrustedProxyCIDRs     []string `yaml:"trusted_proxy_cidrs"`
 	ChallengeProvider     string   `yaml:"challenge_provider"`
@@ -85,6 +87,10 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	buildEngineTimeout, err := parseDuration(raw.BuildEngineTimeout, 35*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
 		ServiceName:           blankFallback(raw.ServiceName, "rigel-console"),
@@ -93,6 +99,7 @@ func Load(path string) (Config, error) {
 		FrontendMode:          blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:    blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
 		BuildEngineAdminToken: blankFallback(os.Getenv("RIGEL_BUILD_ENGINE_ADMIN_TOKEN"), raw.BuildEngineAdminToken),
+		BuildEngineTimeout:    buildEngineTimeout,
 		AdminAllowedCIDRs:     cidrFallback(raw.AdminAllowedCIDRs, []string{"127.0.0.0/8", "::1/128"}),
 		TrustedProxyCIDRs:     cidrFallback(raw.TrustedProxyCIDRs, []string{"127.0.0.0/8", "::1/128"}),
 		ChallengeProvider:     strings.TrimSpace(raw.ChallengeProvider),

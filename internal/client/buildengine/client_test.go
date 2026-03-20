@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rigel-labs/rigel-console/internal/domain/model"
 )
@@ -58,5 +59,12 @@ func TestRecommendBuildWithoutAdminTokenHeader(t *testing.T) {
 	_, err := client.RecommendBuild(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("RecommendBuild() error = %v", err)
+	}
+}
+
+func TestNewWithTimeout(t *testing.T) {
+	client := NewWithTimeout("http://example.com", "token-123", 40*time.Second)
+	if client.httpClient.Timeout != 40*time.Second {
+		t.Fatalf("expected timeout 40s, got %s", client.httpClient.Timeout)
 	}
 }

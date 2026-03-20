@@ -21,10 +21,17 @@ type Client struct {
 }
 
 func New(baseURL, adminToken string) *Client {
+	return NewWithTimeout(baseURL, adminToken, 15*time.Second)
+}
+
+func NewWithTimeout(baseURL, adminToken string, timeout time.Duration) *Client {
+	if timeout <= 0 {
+		timeout = 15 * time.Second
+	}
 	return &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		adminToken: strings.TrimSpace(adminToken),
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: &http.Client{Timeout: timeout},
 	}
 }
 

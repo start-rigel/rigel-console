@@ -109,6 +109,7 @@ go run ./cmd/server -config ./configs/config.yaml
 - 匿名会话小时额度：`5`
 - 匿名冷却秒数：`60`
 - build-engine 后台 token：`build_engine_admin_token`（必填，建议通过密钥管理注入，长度至少 24 位）
+- build-engine 请求超时：`build_engine_timeout`（默认 `35s`，应不小于 build-engine 的 AI 超时配置）
 
 ## 前端开发与构建
 
