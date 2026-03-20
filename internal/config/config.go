@@ -18,9 +18,14 @@ type Config struct {
 	FrontendMode          string        `yaml:"frontend_mode"`
 	BuildEngineBaseURL    string        `yaml:"build_engine_base_url"`
 	BuildEngineAdminToken string        `yaml:"build_engine_admin_token"`
+	AdminAllowedCIDRs     []string      `yaml:"admin_allowed_cidrs"`
+	TrustedProxyCIDRs     []string      `yaml:"trusted_proxy_cidrs"`
+	ChallengeProvider     string        `yaml:"challenge_provider"`
+	ChallengeSiteKey      string        `yaml:"challenge_site_key"`
 	AdminUsername         string        `yaml:"admin_username"`
 	AdminPassword         string        `yaml:"admin_password"`
 	AdminCookieName       string        `yaml:"admin_cookie_name"`
+	AdminCSRFCookieName   string        `yaml:"admin_csrf_cookie_name"`
 	AnonymousCookieName   string        `yaml:"anonymous_cookie_name"`
 	AnonymousHourlyLimit  int           `yaml:"anonymous_hourly_limit"`
 	CooldownSeconds       int           `yaml:"cooldown_seconds"`
@@ -30,21 +35,26 @@ type Config struct {
 }
 
 type fileConfig struct {
-	ServiceName           string `yaml:"service_name"`
-	HTTPPort              string `yaml:"http_port"`
-	LogLevel              string `yaml:"log_level"`
-	FrontendMode          string `yaml:"frontend_mode"`
-	BuildEngineBaseURL    string `yaml:"build_engine_base_url"`
-	BuildEngineAdminToken string `yaml:"build_engine_admin_token"`
-	AdminUsername         string `yaml:"admin_username"`
-	AdminPassword         string `yaml:"admin_password"`
-	AdminCookieName       string `yaml:"admin_cookie_name"`
-	AnonymousCookieName   string `yaml:"anonymous_cookie_name"`
-	AnonymousHourlyLimit  int    `yaml:"anonymous_hourly_limit"`
-	CooldownSeconds       int    `yaml:"cooldown_seconds"`
-	ReadTimeout           string `yaml:"read_timeout"`
-	WriteTimeout          string `yaml:"write_timeout"`
-	IdleTimeout           string `yaml:"idle_timeout"`
+	ServiceName           string   `yaml:"service_name"`
+	HTTPPort              string   `yaml:"http_port"`
+	LogLevel              string   `yaml:"log_level"`
+	FrontendMode          string   `yaml:"frontend_mode"`
+	BuildEngineBaseURL    string   `yaml:"build_engine_base_url"`
+	BuildEngineAdminToken string   `yaml:"build_engine_admin_token"`
+	AdminAllowedCIDRs     []string `yaml:"admin_allowed_cidrs"`
+	TrustedProxyCIDRs     []string `yaml:"trusted_proxy_cidrs"`
+	ChallengeProvider     string   `yaml:"challenge_provider"`
+	ChallengeSiteKey      string   `yaml:"challenge_site_key"`
+	AdminUsername         string   `yaml:"admin_username"`
+	AdminPassword         string   `yaml:"admin_password"`
+	AdminCookieName       string   `yaml:"admin_cookie_name"`
+	AdminCSRFCookieName   string   `yaml:"admin_csrf_cookie_name"`
+	AnonymousCookieName   string   `yaml:"anonymous_cookie_name"`
+	AnonymousHourlyLimit  int      `yaml:"anonymous_hourly_limit"`
+	CooldownSeconds       int      `yaml:"cooldown_seconds"`
+	ReadTimeout           string   `yaml:"read_timeout"`
+	WriteTimeout          string   `yaml:"write_timeout"`
+	IdleTimeout           string   `yaml:"idle_timeout"`
 }
 
 func DefaultPath() string {
@@ -83,9 +93,14 @@ func Load(path string) (Config, error) {
 		FrontendMode:          blankFallback(raw.FrontendMode, "embedded"),
 		BuildEngineBaseURL:    blankFallback(raw.BuildEngineBaseURL, "http://rigel-build-engine:18082"),
 		BuildEngineAdminToken: blankFallback(os.Getenv("RIGEL_BUILD_ENGINE_ADMIN_TOKEN"), raw.BuildEngineAdminToken),
+		AdminAllowedCIDRs:     append([]string{}, raw.AdminAllowedCIDRs...),
+		TrustedProxyCIDRs:     append([]string{}, raw.TrustedProxyCIDRs...),
+		ChallengeProvider:     strings.TrimSpace(raw.ChallengeProvider),
+		ChallengeSiteKey:      strings.TrimSpace(raw.ChallengeSiteKey),
 		AdminUsername:         blankFallback(raw.AdminUsername, "admin"),
 		AdminPassword:         blankFallback(raw.AdminPassword, "admin123456"),
 		AdminCookieName:       blankFallback(raw.AdminCookieName, "rigel_admin_session"),
+		AdminCSRFCookieName:   blankFallback(raw.AdminCSRFCookieName, "rigel_admin_csrf"),
 		AnonymousCookieName:   blankFallback(raw.AnonymousCookieName, "rigel_anonymous_id"),
 		AnonymousHourlyLimit:  intFallback(raw.AnonymousHourlyLimit, 5),
 		CooldownSeconds:       intFallback(raw.CooldownSeconds, 60),

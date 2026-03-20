@@ -75,9 +75,22 @@ func newTestApp() *App {
 		ServiceName:         "rigel-console",
 		AdminCookieName:     "rigel_admin_session",
 		AnonymousCookieName: "rigel_anonymous_id",
+		AdminAllowedCIDRs:   []string{"0.0.0.0/0", "::/0"},
 	}
 	console := consoleservice.New(buildClientStub{}, "admin", "secret", 2, time.Minute)
 	return New(cfg, console)
+}
+
+func loginAdmin(t *testing.T, application *App) []*http.Cookie {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/admin/login", bytes.NewReader([]byte(`{"username":"admin","password":"secret"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	application.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("admin login failed: %d %s", rec.Code, rec.Body.String())
+	}
+	return rec.Result().Cookies()
 }
 
 func TestIndex(t *testing.T) {
@@ -112,8 +125,11 @@ func TestAdminKeywordsRequiresLogin(t *testing.T) {
 
 func TestAdminKeywordAPIWithLogin(t *testing.T) {
 	application := newTestApp()
+	cookies := loginAdmin(t, application)
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/keyword-seeds", nil)
-	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -158,8 +174,11 @@ func TestGenerateCatalogRecommendation(t *testing.T) {
 
 func TestAdminSystemSettingsWithLogin(t *testing.T) {
 	application := newTestApp()
+	cookies := loginAdmin(t, application)
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/settings/system", nil)
-	req.AddCookie(&http.Cookie{Name: "rigel_admin_session", Value: "ok"})
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
 	rec := httptest.NewRecorder()
 	application.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

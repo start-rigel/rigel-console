@@ -28,6 +28,17 @@ type BuildEngineClient interface {
 	UpdateSystemSettings(ctx context.Context, req model.UpdateSystemSettingsRequest) (model.SystemSettingsResponse, error)
 }
 
+type JDCollectorClient interface {
+	GetScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error)
+	UpdateScheduleConfig(ctx context.Context, payload model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error)
+}
+
+type RequestMeta struct {
+	ClientIP          string
+	DeviceFingerprint string
+	AnonymousID       string
+}
+
 type cachedRecommendation struct {
 	response  model.CatalogRecommendationResponse
 	expiresAt time.Time
@@ -40,12 +51,15 @@ type sessionUsage struct {
 }
 
 type Service struct {
-	buildClient      BuildEngineClient
-	adminUsername    string
-	adminPassword    string
-	anonymousLimit   int
-	cooldownDuration time.Duration
-	cacheTTL         time.Duration
+	buildClient       BuildEngineClient
+	jdCollector       JDCollectorClient
+	adminUsername     string
+	adminPasswordHash []byte
+	anonymousLimit    int
+	cooldownDuration  time.Duration
+	cacheTTL          time.Duration
+	sessionTTL        time.Duration
+	store             securityStore
 
 	mu             sync.Mutex
 	seedSeq        int
@@ -60,6 +74,10 @@ func New(buildClient BuildEngineClient, adminUsername, adminPassword string, ano
 	}
 	if adminPassword == "" {
 		adminPassword = "admin123456"
+	}
+	adminPasswordHash, err := hashAdminPassword(adminPassword)
+	if err != nil {
+		panic(fmt.Sprintf("hash admin password: %v", err))
 	}
 	if anonymousLimit <= 0 {
 		anonymousLimit = 5
@@ -80,16 +98,18 @@ func New(buildClient BuildEngineClient, adminUsername, adminPassword string, ano
 	}
 
 	return &Service{
-		buildClient:      buildClient,
-		adminUsername:    adminUsername,
-		adminPassword:    adminPassword,
-		anonymousLimit:   anonymousLimit,
-		cooldownDuration: cooldownDuration,
-		cacheTTL:         10 * time.Minute,
-		seedSeq:          len(initialSeeds),
-		seeds:            seeds,
-		recommendCache:   make(map[string]cachedRecommendation),
-		anonymousUsage:   make(map[string]sessionUsage),
+		buildClient:       buildClient,
+		adminUsername:     adminUsername,
+		adminPasswordHash: adminPasswordHash,
+		anonymousLimit:    anonymousLimit,
+		cooldownDuration:  cooldownDuration,
+		cacheTTL:          10 * time.Minute,
+		sessionTTL:        30 * 24 * time.Hour,
+		store:             newMemorySecurityStore(),
+		seedSeq:           len(initialSeeds),
+		seeds:             seeds,
+		recommendCache:    make(map[string]cachedRecommendation),
+		anonymousUsage:    make(map[string]sessionUsage),
 	}
 }
 
@@ -109,28 +129,29 @@ func newSeed(id, category, keyword, canonicalModel, brand string, aliases []stri
 	}
 }
 
-func (s *Service) IssueAnonymousSession(anonymousID string) model.AnonymousSessionResponse {
+func (s *Service) IssueAnonymousSession(_ context.Context, meta RequestMeta) (model.AnonymousSessionResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	anonymousID := strings.TrimSpace(meta.AnonymousID)
 	if anonymousID == "" {
 		anonymousID = "anon_" + randomToken(12)
 	}
 
 	status := s.currentUsageLocked(anonymousID)
 	return model.AnonymousSessionResponse{
-		AnonymousID:         anonymousID,
-		CooldownSeconds:     cooldownSeconds(status.CooldownUntil),
-		RemainingAIRequests: max(0, s.anonymousLimit-status.Used),
-		ChallengeRequired:   false,
-	}
+		AnonymousID:             anonymousID,
+		CooldownSeconds:         cooldownSeconds(status.CooldownUntil),
+		RemainingAIRequests:     max(0, s.anonymousLimit-status.Used),
+		ChallengeRequired:       false,
+		ChallengePassed:         false,
+		RiskLevel:               "",
+		SessionExpiresInSeconds: int(s.sessionTTL.Seconds()),
+	}, nil
 }
 
-func (s *Service) AuthenticateAdmin(username, password string) bool {
-	return username == s.adminUsername && password == s.adminPassword
-}
-
-func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, anonymousID string) (model.CatalogRecommendationResponse, error) {
+func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.GenerateBuildRequest, meta RequestMeta) (model.CatalogRecommendationResponse, error) {
+	anonymousID := strings.TrimSpace(meta.AnonymousID)
 	if anonymousID == "" {
 		anonymousID = "anon_" + randomToken(12)
 	}
@@ -151,6 +172,7 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 				CacheHit:            false,
 				RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
 				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
+				ChallengeRequired:   false,
 			},
 		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
 	}
@@ -160,6 +182,7 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 			CacheHit:            true,
 			RemainingAIRequests: max(0, s.anonymousLimit-usage.Used),
 			CooldownSeconds:     0,
+			ChallengeRequired:   false,
 		}
 		s.mu.Unlock()
 		return response, nil
@@ -173,6 +196,7 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 				CacheHit:            false,
 				RemainingAIRequests: 0,
 				CooldownSeconds:     cooldownSeconds(usage.CooldownUntil),
+				ChallengeRequired:   false,
 			},
 		}, ErrRateLimited{CooldownSeconds: cooldownSeconds(usage.CooldownUntil)}
 	}
@@ -190,12 +214,38 @@ func (s *Service) GenerateCatalogRecommendation(ctx context.Context, req model.G
 		CacheHit:            false,
 		RemainingAIRequests: remaining,
 		CooldownSeconds:     0,
+		ChallengeRequired:   false,
 	}
 
 	s.mu.Lock()
 	s.recommendCache[key] = cachedRecommendation{response: response, expiresAt: now.Add(s.cacheTTL)}
 	s.mu.Unlock()
 	return response, nil
+}
+
+func (s *Service) VerifyChallenge(_ context.Context, _ RequestMeta, challengeToken string) (model.ChallengeVerifyResponse, error) {
+	if strings.TrimSpace(challengeToken) == "" {
+		return model.ChallengeVerifyResponse{}, fmt.Errorf("challenge token must not be empty")
+	}
+	return model.ChallengeVerifyResponse{
+		Verified:             true,
+		PassExpiresInSeconds: int((15 * time.Minute).Seconds()),
+		RiskLevel:            "",
+	}, nil
+}
+
+func (s *Service) GetCollectorScheduleConfig(ctx context.Context) (model.CollectorScheduleResponse, error) {
+	if s.jdCollector == nil {
+		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
+	}
+	return s.jdCollector.GetScheduleConfig(ctx)
+}
+
+func (s *Service) UpdateCollectorScheduleConfig(ctx context.Context, req model.CollectorScheduleUpsertRequest) (model.CollectorScheduleResponse, error) {
+	if s.jdCollector == nil {
+		return model.CollectorScheduleResponse{}, fmt.Errorf("jd collector client is not configured")
+	}
+	return s.jdCollector.UpdateScheduleConfig(ctx, req)
 }
 
 func (s *Service) GetSystemSettings(ctx context.Context) (model.SystemSettingsResponse, error) {
@@ -206,7 +256,7 @@ func (s *Service) UpdateSystemSettings(ctx context.Context, req model.UpdateSyst
 	return s.buildClient.UpdateSystemSettings(ctx, req)
 }
 
-func (s *Service) ListKeywordSeeds(filter model.KeywordSeedFilter) model.KeywordSeedListResponse {
+func (s *Service) ListKeywordSeeds(_ context.Context, filter model.KeywordSeedFilter) (model.KeywordSeedListResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -261,17 +311,17 @@ func (s *Service) ListKeywordSeeds(filter model.KeywordSeedFilter) model.Keyword
 		Page:     page,
 		PageSize: pageSize,
 		Total:    total,
-	}
+	}, nil
 }
 
-func (s *Service) GetKeywordSeed(id string) (model.KeywordSeed, bool) {
+func (s *Service) GetKeywordSeed(_ context.Context, id string) (model.KeywordSeed, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.seeds[id]
-	return item, ok
+	return item, ok, nil
 }
 
-func (s *Service) CreateKeywordSeed(req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) CreateKeywordSeed(_ context.Context, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
@@ -299,7 +349,7 @@ func (s *Service) CreateKeywordSeed(req model.KeywordSeedUpsertRequest) (model.K
 	return seed, nil
 }
 
-func (s *Service) UpdateKeywordSeed(id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
+func (s *Service) UpdateKeywordSeed(_ context.Context, id string, req model.KeywordSeedUpsertRequest) (model.KeywordSeed, error) {
 	if err := validateSeed(req); err != nil {
 		return model.KeywordSeed{}, err
 	}
@@ -324,7 +374,7 @@ func (s *Service) UpdateKeywordSeed(id string, req model.KeywordSeedUpsertReques
 	return existing, nil
 }
 
-func (s *Service) SetKeywordSeedEnabled(id string, enabled bool) (model.KeywordSeed, error) {
+func (s *Service) SetKeywordSeedEnabled(_ context.Context, id string, enabled bool) (model.KeywordSeed, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -338,7 +388,7 @@ func (s *Service) SetKeywordSeedEnabled(id string, enabled bool) (model.KeywordS
 	return item, nil
 }
 
-func (s *Service) ExportKeywordSeedsExcel() ([]byte, error) {
+func (s *Service) ExportKeywordSeedsExcel(_ context.Context) ([]byte, error) {
 	s.mu.Lock()
 	items := make([]model.KeywordSeed, 0, len(s.seeds))
 	for _, item := range s.seeds {
@@ -399,7 +449,7 @@ func (s *Service) TemplateWorkbook() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *Service) ImportKeywordSeeds(file multipart.File) (model.KeywordSeedImportResponse, error) {
+func (s *Service) ImportKeywordSeeds(_ context.Context, file multipart.File) (model.KeywordSeedImportResponse, error) {
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return model.KeywordSeedImportResponse{}, fmt.Errorf("read upload: %w", err)
@@ -443,7 +493,7 @@ func (s *Service) importWorkbookBytes(content []byte) (model.KeywordSeedImportRe
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue
 		}
-		if _, err := s.CreateKeywordSeed(req); err != nil {
+		if _, err := s.CreateKeywordSeed(context.Background(), req); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, model.KeywordSeedImportError{Row: i + 1, Message: err.Error()})
 			continue
@@ -611,6 +661,14 @@ type ErrRateLimited struct {
 
 func (e ErrRateLimited) Error() string {
 	return "rate limited"
+}
+
+type ErrChallengeRequired struct {
+	RiskLevel string
+}
+
+func (e ErrChallengeRequired) Error() string {
+	return "challenge required"
 }
 
 type ErrNotFound struct {

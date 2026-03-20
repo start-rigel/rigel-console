@@ -72,11 +72,11 @@ func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
 	req := model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"}
 
-	first, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
+	first, err := service.GenerateCatalogRecommendation(context.Background(), req, RequestMeta{AnonymousID: "anon-1"})
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() first error = %v", err)
 	}
-	second, err := service.GenerateCatalogRecommendation(context.Background(), req, "anon-1")
+	second, err := service.GenerateCatalogRecommendation(context.Background(), req, RequestMeta{AnonymousID: "anon-1"})
 	if err != nil {
 		t.Fatalf("GenerateCatalogRecommendation() second error = %v", err)
 	}
@@ -90,7 +90,7 @@ func TestGenerateCatalogRecommendationCachesResult(t *testing.T) {
 
 func TestKeywordSeedCRUD(t *testing.T) {
 	service := New(buildClientStub{}, "admin", "secret", 2, time.Minute)
-	item, err := service.CreateKeywordSeed(model.KeywordSeedUpsertRequest{
+	item, err := service.CreateKeywordSeed(context.Background(), model.KeywordSeedUpsertRequest{
 		Category:       "cpu",
 		Keyword:        "Ryzen 7 7700",
 		CanonicalModel: "Ryzen 7 7700",
@@ -102,7 +102,7 @@ func TestKeywordSeedCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKeywordSeed() error = %v", err)
 	}
-	updated, err := service.UpdateKeywordSeed(item.ID, model.KeywordSeedUpsertRequest{
+	updated, err := service.UpdateKeywordSeed(context.Background(), item.ID, model.KeywordSeedUpsertRequest{
 		Category:       "cpu",
 		Keyword:        "Ryzen 7 7700",
 		CanonicalModel: "Ryzen 7 7700",
@@ -139,7 +139,7 @@ func TestImportKeywordSeeds(t *testing.T) {
 		t.Fatalf("WriteToBuffer() error = %v", err)
 	}
 
-	result, err := service.ImportKeywordSeeds(ioNopCloser{Reader: bytes.NewReader(buf.Bytes())})
+	result, err := service.ImportKeywordSeeds(context.Background(), ioNopCloser{Reader: bytes.NewReader(buf.Bytes())})
 	if err != nil {
 		t.Fatalf("ImportKeywordSeeds() error = %v", err)
 	}
