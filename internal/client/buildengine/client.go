@@ -15,23 +15,25 @@ import (
 )
 
 type Client struct {
-	baseURL    string
-	adminToken string
-	httpClient *http.Client
+	baseURL      string
+	adminToken   string
+	serviceToken string
+	httpClient   *http.Client
 }
 
-func New(baseURL, adminToken string) *Client {
-	return NewWithTimeout(baseURL, adminToken, 15*time.Second)
+func New(baseURL, adminToken, serviceToken string) *Client {
+	return NewWithTimeout(baseURL, adminToken, serviceToken, 15*time.Second)
 }
 
-func NewWithTimeout(baseURL, adminToken string, timeout time.Duration) *Client {
+func NewWithTimeout(baseURL, adminToken, serviceToken string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 15 * time.Second
 	}
 	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		adminToken: strings.TrimSpace(adminToken),
-		httpClient: &http.Client{Timeout: timeout},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		adminToken:   strings.TrimSpace(adminToken),
+		serviceToken: strings.TrimSpace(serviceToken),
+		httpClient:   &http.Client{Timeout: timeout},
 	}
 }
 
@@ -44,7 +46,7 @@ func (c *Client) GetPriceCatalog(ctx context.Context, req model.GenerateBuildReq
 		query.Set("build_mode", req.BuildMode)
 	}
 	query.Set("limit", "500")
-	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil, nil)
+	return doJSON[model.BuildEnginePriceCatalog](ctx, c.httpClient, http.MethodGet, c.baseURL+"/api/v1/catalog/prices?"+query.Encode(), nil, c.serviceHeaders())
 }
 
 func (c *Client) RecommendBuild(ctx context.Context, req model.GenerateBuildRequest) (model.CatalogRecommendationResponse, error) {
@@ -54,7 +56,7 @@ func (c *Client) RecommendBuild(ctx context.Context, req model.GenerateBuildRequ
 		"build_mode": req.BuildMode,
 		"notes":      req.Notes,
 	}
-	return doJSON[model.CatalogRecommendationResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/recommend/build", payload, nil)
+	return doJSON[model.CatalogRecommendationResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/recommend/build", payload, c.serviceHeaders())
 }
 
 func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBuildRequest, catalog model.BuildEnginePriceCatalog) (model.CatalogAdviceResponse, error) {
@@ -67,7 +69,7 @@ func (c *Client) GenerateCatalogAdvice(ctx context.Context, req model.GenerateBu
 		"notes":                req.Notes,
 		"catalog":              catalog,
 	}
-	return doJSON[model.CatalogAdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", payload, nil)
+	return doJSON[model.CatalogAdviceResponse](ctx, c.httpClient, http.MethodPost, c.baseURL+"/api/v1/advice/catalog", payload, c.serviceHeaders())
 }
 
 func (c *Client) GetSystemSettings(ctx context.Context) (model.SystemSettingsResponse, error) {
@@ -84,6 +86,14 @@ func (c *Client) UpdateSystemSettings(ctx context.Context, req model.UpdateSyste
 		extraHeaders["X-Rigel-Admin-Token"] = c.adminToken
 	}
 	return doJSON[model.SystemSettingsResponse](ctx, c.httpClient, http.MethodPut, c.baseURL+"/admin/api/v1/settings/system", req, extraHeaders)
+}
+
+func (c *Client) serviceHeaders() map[string]string {
+	headers := map[string]string{}
+	if c.serviceToken != "" {
+		headers["X-Rigel-Service-Token"] = c.serviceToken
+	}
+	return headers
 }
 
 func doJSON[T any](ctx context.Context, httpClient *http.Client, method, target string, payload any, headers map[string]string) (T, error) {

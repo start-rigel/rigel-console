@@ -38,24 +38,27 @@ func TestGetSystemSettingsAddsAdminTokenHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, "token-123")
+	client := New(server.URL, "token-123", "rigel_internal_service_token_123456")
 	_, err := client.GetSystemSettings(context.Background())
 	if err != nil {
 		t.Fatalf("GetSystemSettings() error = %v", err)
 	}
 }
 
-func TestRecommendBuildWithoutAdminTokenHeader(t *testing.T) {
+func TestRecommendBuildUsesServiceTokenButNotAdminToken(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if token := r.Header.Get("X-Rigel-Admin-Token"); token != "" {
 			t.Fatalf("expected no admin token for non-admin endpoint, got %q", token)
+		}
+		if token := r.Header.Get("X-Rigel-Service-Token"); token != "service-token-123" {
+			t.Fatalf("expected service token header, got %q", token)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"request_status":{"cache_hit":false,"remaining_ai_requests":4,"cooldown_seconds":0},"provider":"build-engine","fallback_used":true,"request":{"budget":6000,"use_case":"gaming","build_mode":"mixed"},"summary":"ok","estimated_total":3200,"within_budget":true,"build_items":[],"advice":{"reasons":[],"risks":[],"upgrade_advice":[]}}`))
 	}))
 	defer server.Close()
 
-	client := New(server.URL, "token-123")
+	client := New(server.URL, "token-123", "service-token-123")
 	_, err := client.RecommendBuild(context.Background(), model.GenerateBuildRequest{Budget: 6000, UseCase: "gaming", BuildMode: "mixed"})
 	if err != nil {
 		t.Fatalf("RecommendBuild() error = %v", err)
@@ -63,7 +66,7 @@ func TestRecommendBuildWithoutAdminTokenHeader(t *testing.T) {
 }
 
 func TestNewWithTimeout(t *testing.T) {
-	client := NewWithTimeout("http://example.com", "token-123", 40*time.Second)
+	client := NewWithTimeout("http://example.com", "token-123", "service-token-123", 40*time.Second)
 	if client.httpClient.Timeout != 40*time.Second {
 		t.Fatalf("expected timeout 40s, got %s", client.httpClient.Timeout)
 	}

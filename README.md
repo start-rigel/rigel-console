@@ -109,6 +109,7 @@ go run ./cmd/server -config ./configs/config.yaml
 - 匿名会话小时额度：`5`
 - 匿名冷却秒数：`60`
 - build-engine 后台 token：`build_engine_admin_token`（必填，建议通过密钥管理注入，长度至少 24 位）
+- build-engine 服务 token：`build_engine_service_token`（必填，`console -> build-engine` 内部调用通过 `X-Rigel-Service-Token` 透传）
 - build-engine 请求超时：`build_engine_timeout`（默认 `35s`，应不小于 build-engine 的 AI 超时配置）
 
 ## 前端开发与构建
@@ -137,7 +138,7 @@ npm run build
 说明：
 
 - 如果上游 `build-engine` 返回 JSON 错误，`rigel-console` 会尽量把原始错误信息继续透传出来，方便直接定位是空价格目录、参数问题还是数据库问题
-- console 仅在调用 build-engine 后台设置接口时携带 `X-Rigel-Admin-Token`，普通推荐接口不会携带该头。
+- console 调用 build-engine 后台设置接口时携带 `X-Rigel-Admin-Token`，调用价格目录/推荐接口时携带 `X-Rigel-Service-Token`。
 
 - React 前端负责渲染 `/`、`/admin/login`、`/admin`、`/admin/keywords`、`/admin/keywords/new`、`/admin/keywords/{id}/edit`、`/admin/keywords/import`
 - Go 仍然负责所有业务 API、Cookie、后台鉴权与静态资源分发
